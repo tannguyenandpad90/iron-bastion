@@ -1,5 +1,5 @@
 import { useGameStore } from '../../stores/gameStore';
-import { getTotalWaves } from '../../game/waves/manager';
+import { getTotalWaves, isBossWave } from '../../game/waves/manager';
 
 export function WaveAnnounce() {
   const { phase, wave, setPhase, nextWave } = useGameStore();
@@ -8,6 +8,7 @@ export function WaveAnnounce() {
 
   const totalWaves = getTotalWaves();
   const nextWaveNum = wave + 1;
+  const isBoss = isBossWave(nextWaveNum);
 
   const handleStart = () => {
     nextWave();
@@ -20,9 +21,16 @@ export function WaveAnnounce() {
         {wave === 0 ? 'IRON BASTION ONLINE' : `WAVE ${wave} CLEARED`}
       </div>
       {nextWaveNum <= totalWaves && (
-        <div style={styles.next}>
-          Next: Wave {nextWaveNum} / {totalWaves}
-        </div>
+        <>
+          <div style={styles.next}>
+            Next: Wave {nextWaveNum} / {totalWaves}
+          </div>
+          {isBoss && (
+            <div style={styles.bossWarning}>
+              WARNING: BOSS INCOMING
+            </div>
+          )}
+        </>
       )}
       <button style={styles.startBtn} onClick={handleStart}>
         START WAVE
@@ -53,9 +61,14 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 4,
     textShadow: '0 0 20px rgba(0,212,255,0.5)',
   },
-  next: {
-    fontSize: 14,
-    color: '#888',
+  next: { fontSize: 14, color: '#888' },
+  bossWarning: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ff00ff',
+    letterSpacing: 3,
+    textShadow: '0 0 15px rgba(255,0,255,0.5)',
+    animation: 'pulse 1s ease-in-out infinite',
   },
   startBtn: {
     marginTop: 8,
@@ -69,10 +82,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 3,
-    transition: 'all 0.2s',
   },
-  hint: {
-    fontSize: 11,
-    color: '#555',
-  },
+  hint: { fontSize: 11, color: '#555' },
 };

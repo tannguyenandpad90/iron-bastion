@@ -25,13 +25,22 @@ export type EntityType = 'tower' | 'enemy' | 'projectile' | 'effect';
 
 // --- Tower ---
 export type TowerType = 'cannon' | 'laser' | 'aoe';
+export type TargetingMode = 'first' | 'strongest' | 'closest';
 
 export interface TowerStats {
   damage: number;
   range: number;
-  fireRate: number; // shots per second
+  fireRate: number;
   cost: number;
   upgradeCost: number;
+  projectileSpeed: number;
+  statusOnHit?: { type: StatusEffect; duration: number; intensity: number };
+}
+
+export interface SynergyBuff {
+  bonusType: string;
+  value: number;
+  pairedWith: string;
 }
 
 export interface Tower extends Entity {
@@ -39,13 +48,15 @@ export interface Tower extends Entity {
   towerType: TowerType;
   level: number;
   stats: TowerStats;
-  target: string | null; // enemy id
+  target: string | null;
   cooldown: number;
   gridPos: GridPosition;
+  targetingMode: TargetingMode;
+  synergyBuffs: SynergyBuff[];
 }
 
 // --- Enemy ---
-export type EnemyType = 'fast' | 'tank' | 'swarm';
+export type EnemyType = 'fast' | 'tank' | 'swarm' | 'boss';
 export type EnemyTrait = 'shield' | 'stealth' | 'regen';
 export type StatusEffect = 'slow' | 'burn' | 'stun';
 
@@ -63,15 +74,26 @@ export interface ActiveStatusEffect {
   intensity: number;
 }
 
+// Boss-specific phase mechanic
+export interface BossPhase {
+  hpThreshold: number; // triggers when HP drops below this %
+  type: 'shield' | 'enrage' | 'spawn';
+  active: boolean;
+  duration: number;   // ms, 0 = permanent
+  remaining: number;
+}
+
 export interface Enemy extends Entity {
   type: 'enemy';
   enemyType: EnemyType;
   stats: EnemyStats;
   hp: number;
   pathIndex: number;
-  pathProgress: number; // 0-1 interpolation between current and next waypoint
+  pathProgress: number;
   traits: EnemyTrait[];
   statusEffects: ActiveStatusEffect[];
+  isBoss: boolean;
+  bossPhases?: BossPhase[];
 }
 
 // --- Projectile ---
@@ -82,19 +104,22 @@ export interface Projectile extends Entity {
   targetId: string;
   sourceId: string;
   aoeRadius?: number;
+  statusOnHit?: { type: StatusEffect; duration: number; intensity: number };
+  critApplied?: boolean;
 }
 
 // --- Wave ---
 export interface WaveSegment {
   enemyType: EnemyType;
   count: number;
-  interval: number; // ms between spawns
+  interval: number;
   traits?: EnemyTrait[];
 }
 
 export interface Wave {
   segments: WaveSegment[];
   reward: number;
+  isBoss?: boolean;
 }
 
 // --- Skill ---

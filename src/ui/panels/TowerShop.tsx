@@ -1,12 +1,6 @@
 import { useGameStore } from '../../stores/gameStore';
-import { TOWER_CONFIG } from '../../config/towers';
+import { TOWER_CONFIG, TOWER_DESCRIPTIONS } from '../../config/towers';
 import type { TowerType } from '../../types';
-
-const TOWER_INFO: Record<TowerType, { name: string; desc: string; color: string; key: string }> = {
-  cannon: { name: 'Cannon', desc: 'Single target, high DMG', color: '#ff6b35', key: '1' },
-  laser: { name: 'Laser', desc: 'Continuous beam', color: '#00ff88', key: '2' },
-  aoe: { name: 'AoE Splash', desc: 'Area damage', color: '#ff3366', key: '3' },
-};
 
 export function TowerShop() {
   const { gold, selectedTowerType, selectTowerType, phase } = useGameStore();
@@ -16,7 +10,7 @@ export function TowerShop() {
       <div style={styles.title}>TOWERS</div>
       {(Object.keys(TOWER_CONFIG) as TowerType[]).map((type) => {
         const config = TOWER_CONFIG[type];
-        const info = TOWER_INFO[type];
+        const info = TOWER_DESCRIPTIONS[type];
         const canAfford = gold >= config.cost;
         const isSelected = selectedTowerType === type;
 
@@ -42,7 +36,11 @@ export function TowerShop() {
               <div style={styles.statsRow}>
                 <span style={styles.miniStat}>DMG {config.damage}</span>
                 <span style={styles.miniStat}>RNG {config.range}</span>
-                <span style={styles.miniStat}>SPD {config.fireRate}/s</span>
+                {config.statusOnHit && (
+                  <span style={{ ...styles.miniStat, color: '#7b68ee' }}>
+                    {config.statusOnHit.type}
+                  </span>
+                )}
               </div>
             </div>
             <span style={styles.cost}>{config.cost}g</span>
@@ -55,9 +53,9 @@ export function TowerShop() {
       <div style={styles.helpSection}>
         <div style={styles.helpTitle}>CONTROLS</div>
         <div style={styles.helpLine}>[1/2/3] Select tower</div>
-        <div style={styles.helpLine}>[Click] Place tower</div>
-        <div style={styles.helpLine}>[Right-click] Deselect</div>
-        <div style={styles.helpLine}>[Esc] Cancel</div>
+        <div style={styles.helpLine}>[Q/W/E] Use skill</div>
+        <div style={styles.helpLine}>[Click] Place / target</div>
+        <div style={styles.helpLine}>[Right-click] Cancel</div>
         <div style={styles.helpLine}>[Space] {phase === 'wave' ? 'Pause' : 'Start wave'}</div>
       </div>
     </div>
@@ -95,12 +93,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#eee',
     textAlign: 'left',
   },
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: '50%',
-    flexShrink: 0,
-  },
+  colorDot: { width: 12, height: 12, borderRadius: '50%', flexShrink: 0 },
   info: { display: 'flex', flexDirection: 'column', flex: 1, gap: 2 },
   nameRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   name: { fontSize: 13, fontWeight: 'bold' },
@@ -109,25 +102,8 @@ const styles: Record<string, React.CSSProperties> = {
   statsRow: { display: 'flex', gap: 6 },
   miniStat: { fontSize: 9, color: '#666' },
   cost: { fontSize: 14, color: '#ffd700', fontWeight: 'bold', flexShrink: 0 },
-  divider: {
-    height: 1,
-    background: '#333',
-    margin: '4px 0',
-  },
-  helpSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 3,
-    paddingTop: 4,
-  },
-  helpTitle: {
-    fontSize: 10,
-    color: '#555',
-    letterSpacing: 2,
-    marginBottom: 2,
-  },
-  helpLine: {
-    fontSize: 10,
-    color: '#444',
-  },
+  divider: { height: 1, background: '#333', margin: '4px 0' },
+  helpSection: { display: 'flex', flexDirection: 'column', gap: 3, paddingTop: 4 },
+  helpTitle: { fontSize: 10, color: '#555', letterSpacing: 2, marginBottom: 2 },
+  helpLine: { fontSize: 10, color: '#444' },
 };

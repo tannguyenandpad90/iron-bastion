@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GameState, GamePhase, Tower, Enemy, Projectile, Skill, TowerType } from '../types';
+import type { GameState, GamePhase, Tower, Enemy, Projectile, Skill, TowerType, SkillType } from '../types';
 import { INITIAL_GAME_STATE } from '../config/game';
 
 interface GameStore extends GameState {
@@ -10,6 +10,7 @@ interface GameStore extends GameState {
 
   // Skills
   skills: Skill[];
+  activeSkill: SkillType | null; // skill waiting for target click
 
   // UI State
   selectedTowerType: TowerType | null;
@@ -28,6 +29,7 @@ interface GameStore extends GameState {
   addTower: (tower: Tower) => void;
   removeTower: (id: string) => void;
   updateTower: (id: string, updates: Partial<Tower>) => void;
+  setTowers: (towers: Tower[]) => void;
   addEnemy: (enemy: Enemy) => void;
   removeEnemy: (id: string) => void;
   updateEnemy: (id: string, updates: Partial<Enemy>) => void;
@@ -41,11 +43,18 @@ interface GameStore extends GameState {
   // Actions - UI
   selectTowerType: (type: TowerType | null) => void;
   selectTower: (id: string | null) => void;
+  setActiveSkill: (skill: SkillType | null) => void;
 
   // Actions - Energy
   useEnergy: (amount: number) => boolean;
   regenEnergy: (amount: number) => void;
 }
+
+const INITIAL_SKILLS: Skill[] = [
+  { type: 'emp', cooldown: 15000, currentCooldown: 0, energyCost: 30 },
+  { type: 'airstrike', cooldown: 20000, currentCooldown: 0, energyCost: 50 },
+  { type: 'freeze', cooldown: 12000, currentCooldown: 0, energyCost: 25 },
+];
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...INITIAL_GAME_STATE,
@@ -53,11 +62,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   towers: [],
   enemies: [],
   projectiles: [],
-  skills: [
-    { type: 'emp', cooldown: 15000, currentCooldown: 0, energyCost: 30 },
-    { type: 'airstrike', cooldown: 20000, currentCooldown: 0, energyCost: 50 },
-    { type: 'freeze', cooldown: 12000, currentCooldown: 0, energyCost: 25 },
-  ],
+  skills: INITIAL_SKILLS.map((s) => ({ ...s })),
+  activeSkill: null,
 
   selectedTowerType: null,
   selectedTowerId: null,
@@ -86,11 +92,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       towers: [],
       enemies: [],
       projectiles: [],
-      skills: [
-        { type: 'emp', cooldown: 15000, currentCooldown: 0, energyCost: 30 },
-        { type: 'airstrike', cooldown: 20000, currentCooldown: 0, energyCost: 50 },
-        { type: 'freeze', cooldown: 12000, currentCooldown: 0, energyCost: 25 },
-      ],
+      skills: INITIAL_SKILLS.map((s) => ({ ...s })),
+      activeSkill: null,
       selectedTowerType: null,
       selectedTowerId: null,
     }),
@@ -102,6 +105,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((s) => ({
       towers: s.towers.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     })),
+  setTowers: (towers) => set({ towers }),
   addEnemy: (enemy) => set((s) => ({ enemies: [...s.enemies, enemy] })),
   removeEnemy: (id) => set((s) => ({ enemies: s.enemies.filter((e) => e.id !== id) })),
   updateEnemy: (id, updates) =>
@@ -117,8 +121,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   clearProjectiles: () => set({ projectiles: [] }),
 
   // UI
-  selectTowerType: (type) => set({ selectedTowerType: type, selectedTowerId: null }),
-  selectTower: (id) => set({ selectedTowerId: id, selectedTowerType: null }),
+  selectTowerType: (type) =>
+    set({ selectedTowerType: type, selectedTowerId: null, activeSkill: null }),
+  selectTower: (id) =>
+    set({ selectedTowerId: id, selectedTowerType: null, activeSkill: null }),
+  setActiveSkill: (skill) =>
+    set({ activeSkill: skill, selectedTowerType: null, selectedTowerId: null }),
 
   // Energy
   useEnergy: (amount) => {

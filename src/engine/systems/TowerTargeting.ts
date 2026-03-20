@@ -1,4 +1,4 @@
-import type { GameSystem, GameMap, Enemy, Tower } from '../../types';
+import type { GameSystem, GameMap, Enemy, Tower, TargetingMode } from '../../types';
 import { useGameStore } from '../../stores/gameStore';
 
 export class TowerTargeting implements GameSystem {
@@ -12,16 +12,12 @@ export class TowerTargeting implements GameSystem {
 
   update(_dt: number) {
     const store = useGameStore.getState();
-
-    if (store.phase !== 'wave') return;
-    if (store.towers.length === 0) return;
+    if (store.phase !== 'wave' || store.towers.length === 0) return;
 
     let changed = false;
-
     const updatedTowers = store.towers.map((tower) => {
       const target = this.findTarget(tower, store.enemies);
       const newTargetId = target?.id ?? null;
-
       if (newTargetId !== tower.target) {
         changed = true;
         return { ...tower, target: newTargetId };
@@ -36,15 +32,14 @@ export class TowerTargeting implements GameSystem {
 
   private findTarget(tower: Tower, enemies: Enemy[]): Enemy | null {
     const rangeInPixels = tower.stats.range * this.map.cellSize;
-    const rangeSquared = rangeInPixels * rangeInPixels;
+    const rangeSq = rangeInPixels * rangeInPixels;
 
-    let bestTarget: Enemy | null = null;
-    let bestProgress = -1;
+    const inRange: { enemy: Enemy; distSq: number }[] = [];
 
     for (const enemy of enemies) {
       if (!enemy.active) continue;
 
-      // Skip stealth enemies unless very close
+      // Stealth: only detectable within 1.5 cells
       if (enemy.traits.includes('stealth')) {
         const detectRange = this.map.cellSize * 1.5;
         const dx = enemy.position.x - tower.position.x;
@@ -54,17 +49,55 @@ export class TowerTargeting implements GameSystem {
 
       const dx = enemy.position.x - tower.position.x;
       const dy = enemy.position.y - tower.position.y;
-      const distSquared = dx * dx + dy * dy;
+      const distSq = dx * dx + dy * dy;
 
-      if (distSquared <= rangeSquared) {
-        const progress = enemy.pathIndex + enemy.pathProgress;
-        if (progress > bestProgress) {
-          bestProgress = progress;
-          bestTarget = enemy;
-        }
+      if (distSq <= rangeSq) {
+        inRange.push({ enemy, distSq });
       }
     }
 
-    return bestTarget;
+    if (inRange.length === 0) return null;
+
+    return this.selectByMode(tower.targetingMode, inRange);
+  }
+
+  private selectByMode(
+    mode: TargetingMode,
+    candidates: { enemy: Enemy; distSq: number }[],
+  ): Enemy {
+    switch (mode) {
+      case 'first': {
+        // Furthest along path = highest priority
+        let best = candidates[0];
+        for (let i = 1; i < candidates.length; i++) {
+          const c = candidates[i];
+          const cProgress = c.enemy.pathIndex + c.enemy.pathProgress;
+          const bProgress = best.enemy.pathIndex + best.enemy.pathProgress;
+          if (cProgress > bProgress) best = c;
+        }
+        return best.enemy;
+      }
+
+      case 'strongest': {
+        // Highest current HP
+        let best = candidates[0];
+        for (let i = 1; i < candidates.length; i++) {
+          if (candidates[i].enemy.hp > best.enemy.hp) {
+            best = candidates[i];
+          }
+        }
+        return best.enemy;
+      }
+
+      case 'closest': {
+        let best = candidates[0];
+        for (let i = 1; i < candidates.length; i++) {
+          if (candidates[i].distSq < best.distSq) {
+            best = candidates[i];
+          }
+        }
+        return best.enemy;
+      }
+    }
   }
 }

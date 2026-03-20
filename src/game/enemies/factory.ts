@@ -1,5 +1,5 @@
-import type { Enemy, EnemyType, EnemyTrait, GridPosition } from '../../types';
-import { ENEMY_CONFIG, ENEMY_SCALE_PER_WAVE } from '../../config/enemies';
+import type { Enemy, EnemyType, EnemyTrait, GridPosition, BossPhase } from '../../types';
+import { ENEMY_CONFIG, ENEMY_SCALE_PER_WAVE, BOSS_PHASES } from '../../config/enemies';
 
 let nextEnemyId = 0;
 
@@ -20,11 +20,28 @@ export function createEnemy(
     reward: baseStats.reward,
   };
 
-  // Shield trait gives bonus HP
-  let hp = stats.maxHp;
+  // Shield trait: +50% HP
   if (traits.includes('shield')) {
-    hp = Math.floor(hp * 1.5);
-    stats.maxHp = hp;
+    stats.maxHp = Math.floor(stats.maxHp * 1.5);
+  }
+
+  // Boss scaling: additional wave-based HP boost
+  const isBoss = enemyType === 'boss';
+  if (isBoss) {
+    stats.maxHp = Math.floor(stats.maxHp * (1 + waveNumber * 0.2));
+    stats.armor = Math.floor(stats.armor * 1.5);
+  }
+
+  // Build boss phases
+  let bossPhases: BossPhase[] | undefined;
+  if (isBoss) {
+    bossPhases = BOSS_PHASES.map((p) => ({
+      hpThreshold: p.hpThreshold,
+      type: p.type,
+      active: false,
+      duration: p.duration,
+      remaining: p.duration,
+    }));
   }
 
   return {
@@ -32,15 +49,21 @@ export function createEnemy(
     type: 'enemy',
     enemyType,
     stats,
-    hp,
+    hp: stats.maxHp,
     pathIndex: 0,
     pathProgress: 0,
     traits,
     statusEffects: [],
+    isBoss,
+    bossPhases,
     position: {
       x: spawnGridPos.col * cellSize + cellSize / 2,
       y: spawnGridPos.row * cellSize + cellSize / 2,
     },
     active: true,
   };
+}
+
+export function resetEnemyIds() {
+  nextEnemyId = 0;
 }

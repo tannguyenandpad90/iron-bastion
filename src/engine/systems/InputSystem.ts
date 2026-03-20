@@ -3,7 +3,9 @@ import type { GameSystem, GameMap, GridClickEvent, HoverEvent, GridPosition } fr
 import type { InputManager } from '../InputManager';
 import { useGameStore } from '../../stores/gameStore';
 import { TOWER_CONFIG } from '../../config/towers';
+import { SKILL_CONFIG } from '../../config/skills';
 import { createTower } from '../../game/towers/factory';
+import { executeSkill } from '../../game/skills/execute';
 
 export class InputSystem implements GameSystem {
   readonly name = 'inputSystem';
@@ -12,6 +14,7 @@ export class InputSystem implements GameSystem {
   private map: GameMap;
   private hoverGraphic: Graphics;
   private rangeGraphic: Graphics;
+  private skillTargetGraphic: Graphics;
   private currentHover: GridPosition | null = null;
   private cleanups: (() => void)[] = [];
 
@@ -26,6 +29,10 @@ export class InputSystem implements GameSystem {
     this.rangeGraphic = new Graphics();
     this.rangeGraphic.visible = false;
     uiLayer.addChild(this.rangeGraphic);
+
+    this.skillTargetGraphic = new Graphics();
+    this.skillTargetGraphic.visible = false;
+    uiLayer.addChild(this.skillTargetGraphic);
   }
 
   init() {
@@ -38,6 +45,32 @@ export class InputSystem implements GameSystem {
     const store = useGameStore.getState();
     const { cellSize } = this.map;
 
+    // Skill targeting mode
+    if (store.activeSkill && this.currentHover) {
+      const config = SKILL_CONFIG[store.activeSkill];
+      const cx = this.currentHover.col * cellSize + cellSize / 2;
+      const cy = this.currentHover.row * cellSize + cellSize / 2;
+      const radius = config.radius * cellSize;
+
+      this.skillTargetGraphic.clear();
+      this.skillTargetGraphic.circle(cx, cy, radius);
+      this.skillTargetGraphic.fill({ color: 0xff4444, alpha: 0.1 });
+      this.skillTargetGraphic.stroke({ color: 0xff4444, width: 2, alpha: 0.5 });
+      // Crosshair
+      this.skillTargetGraphic.moveTo(cx - 8, cy);
+      this.skillTargetGraphic.lineTo(cx + 8, cy);
+      this.skillTargetGraphic.moveTo(cx, cy - 8);
+      this.skillTargetGraphic.lineTo(cx, cy + 8);
+      this.skillTargetGraphic.stroke({ color: 0xff4444, width: 1, alpha: 0.8 });
+      this.skillTargetGraphic.visible = true;
+
+      this.hoverGraphic.visible = false;
+      this.rangeGraphic.visible = false;
+      return;
+    }
+    this.skillTargetGraphic.visible = false;
+
+    // Tower placement hover
     if (this.currentHover && store.selectedTowerType) {
       const { col, row } = this.currentHover;
       const cellType = this.map.grid[row][col];
@@ -46,24 +79,14 @@ export class InputSystem implements GameSystem {
       );
       const canPlace = cellType === 'buildable' && !hasTower;
       const towerConfig = TOWER_CONFIG[store.selectedTowerType];
-      const canAfford = store.gold >= towerConfig.cost;
-      const valid = canPlace && canAfford;
+      const valid = canPlace && store.gold >= towerConfig.cost;
 
-      // Hover highlight
       this.hoverGraphic.clear();
       this.hoverGraphic.rect(col * cellSize, row * cellSize, cellSize, cellSize);
-      this.hoverGraphic.fill({
-        color: valid ? 0x00ff00 : 0xff0000,
-        alpha: 0.2,
-      });
-      this.hoverGraphic.stroke({
-        color: valid ? 0x00ff00 : 0xff0000,
-        width: 2,
-        alpha: 0.5,
-      });
+      this.hoverGraphic.fill({ color: valid ? 0x00ff00 : 0xff0000, alpha: 0.2 });
+      this.hoverGraphic.stroke({ color: valid ? 0x00ff00 : 0xff0000, width: 2, alpha: 0.5 });
       this.hoverGraphic.visible = true;
 
-      // Range preview
       if (canPlace) {
         const rangeInPixels = towerConfig.range * cellSize;
         const cx = col * cellSize + cellSize / 2;
@@ -89,25 +112,29 @@ export class InputSystem implements GameSystem {
     if (event.button === 'right') {
       store.selectTowerType(null);
       store.selectTower(null);
+      store.setActiveSkill(null);
       return;
     }
 
-    // Place tower
+    // Skill targeting
+    if (store.activeSkill) {
+      const worldPos = this.input.gridToWorld(event.gridPos);
+      executeSkill(store.activeSkill, worldPos);
+      store.setActiveSkill(null);
+      return;
+    }
+
+    // Tower placement
     if (store.selectedTowerType && event.cellType === 'buildable') {
       const hasTower = store.towers.some(
         (t) =>
           t.gridPos.col === event.gridPos.col &&
           t.gridPos.row === event.gridPos.row,
       );
-
       if (!hasTower) {
         const config = TOWER_CONFIG[store.selectedTowerType];
         if (store.spendGold(config.cost)) {
-          const tower = createTower(
-            store.selectedTowerType,
-            event.gridPos,
-            this.map.cellSize,
-          );
+          const tower = createTower(store.selectedTowerType, event.gridPos, this.map.cellSize);
           store.addTower(tower);
           return;
         }
@@ -115,7 +142,7 @@ export class InputSystem implements GameSystem {
       return;
     }
 
-    // Click existing tower to select
+    // Click existing tower
     const clickedTower = store.towers.find(
       (t) =>
         t.gridPos.col === event.gridPos.col &&
@@ -139,6 +166,7 @@ export class InputSystem implements GameSystem {
       case 'Escape':
         store.selectTowerType(null);
         store.selectTower(null);
+        store.setActiveSkill(null);
         break;
       case '1':
         store.selectTowerType('cannon');
@@ -148,6 +176,18 @@ export class InputSystem implements GameSystem {
         break;
       case '3':
         store.selectTowerType('aoe');
+        break;
+      case 'q':
+      case 'Q':
+        store.setActiveSkill(store.activeSkill === 'emp' ? null : 'emp');
+        break;
+      case 'w':
+      case 'W':
+        store.setActiveSkill(store.activeSkill === 'airstrike' ? null : 'airstrike');
+        break;
+      case 'e':
+      case 'E':
+        store.setActiveSkill(store.activeSkill === 'freeze' ? null : 'freeze');
         break;
       case ' ':
         if (store.phase === 'prep') {
@@ -163,9 +203,7 @@ export class InputSystem implements GameSystem {
   };
 
   destroy() {
-    for (const cleanup of this.cleanups) {
-      cleanup();
-    }
+    for (const cleanup of this.cleanups) cleanup();
     this.cleanups = [];
   }
 }

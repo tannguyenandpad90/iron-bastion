@@ -13,26 +13,32 @@ export class EnemyMovement implements GameSystem {
 
   update(dt: number) {
     const store = useGameStore.getState();
-
-    if (store.phase !== 'wave') return;
-    if (store.enemies.length === 0) return;
+    if (store.phase !== 'wave' || store.enemies.length === 0) return;
 
     const surviving = [];
     let livesLost = 0;
 
     for (const enemy of store.enemies) {
-      // Skip stunned enemies
+      // Stunned enemies don't move
       const isStunned = enemy.statusEffects.some((e) => e.type === 'stun' && e.remaining > 0);
       if (isStunned) {
         surviving.push(enemy);
         continue;
       }
 
-      // Calculate speed modifier from status effects
+      // Speed modifiers
       let speedMultiplier = 1;
       for (const effect of enemy.statusEffects) {
         if (effect.type === 'slow' && effect.remaining > 0) {
           speedMultiplier *= (1 - effect.intensity);
+        }
+      }
+
+      // Boss enrage: +60% speed
+      if (enemy.isBoss && enemy.bossPhases) {
+        const enrage = enemy.bossPhases.find((p) => p.type === 'enrage' && p.active);
+        if (enrage) {
+          speedMultiplier *= 1.6;
         }
       }
 
@@ -45,7 +51,7 @@ export class EnemyMovement implements GameSystem {
       );
 
       if (result.reachedEnd) {
-        livesLost++;
+        livesLost += enemy.isBoss ? 5 : 1;
       } else {
         surviving.push({
           ...enemy,
@@ -56,7 +62,6 @@ export class EnemyMovement implements GameSystem {
       }
     }
 
-    // Batch update
     store.setEnemies(surviving);
     if (livesLost > 0) {
       store.loseLives(livesLost);

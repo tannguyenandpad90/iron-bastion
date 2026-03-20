@@ -13,7 +13,7 @@ export function getTotalEnemies(wave: Wave): number {
 
 export function getSpawnSchedule(wave: Wave): { segment: WaveSegment; delay: number }[] {
   const schedule: { segment: WaveSegment; delay: number }[] = [];
-  let cumDelay = 500; // initial delay
+  let cumDelay = 500;
 
   for (const segment of wave.segments) {
     for (let i = 0; i < segment.count; i++) {
@@ -29,7 +29,8 @@ export function getSpawnSchedule(wave: Wave): { segment: WaveSegment; delay: num
 }
 
 export function isBossWave(waveNumber: number): boolean {
-  return waveNumber % 5 === 0;
+  const wave = getWave(waveNumber);
+  return wave?.isBoss ?? false;
 }
 
 export function getTotalWaves(): number {
