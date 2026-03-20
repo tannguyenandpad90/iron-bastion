@@ -1,17 +1,19 @@
 import { Application, Container } from 'pixi.js';
-import { GridRenderer } from './systems/GridRenderer';
+import { SceneManager } from './SceneManager';
 import { GAME_MAP } from '../config/game';
+import { GameScene } from './scenes/GameScene';
 
 export class GameEngine {
   app: Application;
-  gameContainer: Container;
-  gridRenderer: GridRenderer | null = null;
+  stage: Container;
+  sceneManager: SceneManager;
   private running = false;
   private lastTime = 0;
 
   constructor() {
     this.app = new Application();
-    this.gameContainer = new Container();
+    this.stage = new Container();
+    this.sceneManager = new SceneManager();
   }
 
   async init(canvas: HTMLCanvasElement) {
@@ -23,41 +25,55 @@ export class GameEngine {
       antialias: true,
     });
 
-    this.app.stage.addChild(this.gameContainer);
+    this.app.stage.addChild(this.stage);
 
-    // Init systems
-    this.gridRenderer = new GridRenderer(this.gameContainer, GAME_MAP);
-    this.gridRenderer.render();
+    // Prevent right-click context menu on canvas
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Register scenes
+    const gameScene = new GameScene(this);
+    this.sceneManager.register(gameScene);
+
+    // Start with game scene
+    this.sceneManager.switch('game');
   }
 
   start() {
     this.running = true;
     this.lastTime = performance.now();
-    this.app.ticker.add(this.update);
+    this.app.ticker.add(this.tick);
   }
 
   stop() {
     this.running = false;
-    this.app.ticker.remove(this.update);
+    this.app.ticker.remove(this.tick);
   }
 
-  private update = () => {
+  pause() {
+    this.running = false;
+  }
+
+  resume() {
+    this.running = true;
+    this.lastTime = performance.now();
+  }
+
+  private tick = () => {
     if (!this.running) return;
 
     const now = performance.now();
-    const _dt = (now - this.lastTime) / 1000;
+    const dt = (now - this.lastTime) / 1000;
     this.lastTime = now;
 
-    // TODO: Update game systems
-    // - Enemy movement
-    // - Tower targeting
-    // - Projectile movement
-    // - Damage resolution
-    // - Wave spawning
+    // Clamp dt to prevent spiral of death after tab switch
+    const clampedDt = Math.min(dt, 0.1);
+
+    this.sceneManager.update(clampedDt);
   };
 
   destroy() {
     this.stop();
+    this.sceneManager.destroy();
     this.app.destroy(true);
   }
 }

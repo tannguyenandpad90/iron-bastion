@@ -58,7 +58,6 @@ export class GridRenderer {
       }
     }
 
-    // Draw path direction indicators
     this.drawPathIndicators();
   }
 

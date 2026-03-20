@@ -1,15 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { GameEngine } from '../../engine/GameEngine';
 
+// Singleton engine reference accessible from outside React
+let engineInstance: GameEngine | null = null;
+
+export function getEngine(): GameEngine | null {
+  return engineInstance;
+}
+
 export function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engineRef = useRef<GameEngine | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     const engine = new GameEngine();
-    engineRef.current = engine;
+    engineInstance = engine;
 
     engine.init(canvasRef.current).then(() => {
       engine.start();
@@ -17,7 +23,7 @@ export function GameCanvas() {
 
     return () => {
       engine.destroy();
-      engineRef.current = null;
+      engineInstance = null;
     };
   }, []);
 

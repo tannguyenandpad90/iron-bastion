@@ -69,6 +69,7 @@ export interface Enemy extends Entity {
   stats: EnemyStats;
   hp: number;
   pathIndex: number;
+  pathProgress: number; // 0-1 interpolation between current and next waypoint
   traits: EnemyTrait[];
   statusEffects: ActiveStatusEffect[];
 }
@@ -129,4 +130,33 @@ export interface GameMap {
   cellSize: number;
   grid: CellType[][];
   path: GridPosition[];
+}
+
+// --- Scene System ---
+export interface Scene {
+  name: string;
+  init(): void;
+  update(dt: number): void;
+  destroy(): void;
+}
+
+// --- Game System (ECS-lite) ---
+export interface GameSystem {
+  name: string;
+  init?(): void;
+  update(dt: number): void;
+  destroy?(): void;
+}
+
+// --- Input ---
+export interface GridClickEvent {
+  gridPos: GridPosition;
+  worldPos: WorldPosition;
+  cellType: CellType;
+  button: 'left' | 'right';
+}
+
+export interface HoverEvent {
+  gridPos: GridPosition | null;
+  worldPos: WorldPosition;
 }
