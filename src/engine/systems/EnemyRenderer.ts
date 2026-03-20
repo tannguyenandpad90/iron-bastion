@@ -14,12 +14,20 @@ const ENEMY_SIZES: Record<EnemyType, number> = {
   swarm: 0.25,
 };
 
+interface EnemySprite {
+  container: Container;
+  body: Graphics;
+  hpBg: Graphics;
+  hpFill: Graphics;
+  size: number;
+}
+
 export class EnemyRenderer implements GameSystem {
   readonly name = 'enemyRenderer';
 
   private container: Container;
   private map: GameMap;
-  private sprites = new Map<string, Container>();
+  private sprites = new Map<string, EnemySprite>();
 
   constructor(parent: Container, map: GameMap) {
     this.container = new Container();
@@ -34,8 +42,8 @@ export class EnemyRenderer implements GameSystem {
     // Remove sprites for dead enemies
     for (const [id, sprite] of this.sprites) {
       if (!activeIds.has(id)) {
-        this.container.removeChild(sprite);
-        sprite.destroy({ children: true });
+        this.container.removeChild(sprite.container);
+        sprite.container.destroy({ children: true });
         this.sprites.delete(id);
       }
     }
@@ -47,19 +55,33 @@ export class EnemyRenderer implements GameSystem {
       if (!sprite) {
         sprite = this.createEnemySprite(enemy);
         this.sprites.set(enemy.id, sprite);
-        this.container.addChild(sprite);
+        this.container.addChild(sprite.container);
       }
 
       // Update position
-      sprite.x = enemy.position.x;
-      sprite.y = enemy.position.y;
+      sprite.container.x = enemy.position.x;
+      sprite.container.y = enemy.position.y;
 
       // Update HP bar
-      this.updateHpBar(sprite, enemy);
+      const ratio = Math.max(0, enemy.hp / enemy.stats.maxHp);
+      sprite.hpFill.clear();
+      const barWidth = sprite.size * ratio;
+      if (barWidth > 0) {
+        const color = ratio > 0.5 ? 0x00ff00 : ratio > 0.25 ? 0xffff00 : 0xff0000;
+        sprite.hpFill.rect(-sprite.size / 2, -sprite.size / 2 - 8, barWidth, 4);
+        sprite.hpFill.fill({ color });
+      }
+
+      // Status effect visual indicator
+      if (enemy.statusEffects.length > 0) {
+        sprite.body.tint = 0x8888ff; // tint when affected
+      } else {
+        sprite.body.tint = 0xffffff;
+      }
     }
   }
 
-  private createEnemySprite(enemy: Enemy): Container {
+  private createEnemySprite(enemy: Enemy): EnemySprite {
     const { cellSize } = this.map;
     const color = ENEMY_COLORS[enemy.enemyType];
     const sizeFactor = ENEMY_SIZES[enemy.enemyType];
@@ -72,35 +94,22 @@ export class EnemyRenderer implements GameSystem {
     body.circle(0, 0, size / 2);
     body.fill({ color, alpha: 0.9 });
     body.stroke({ color: 0xffffff, width: 1, alpha: 0.4 });
-    spriteContainer.addChild(body);
 
     // HP bar background
     const hpBg = new Graphics();
-    hpBg.rect(-size / 2, -size / 2 - 6, size, 4);
+    hpBg.rect(-size / 2, -size / 2 - 8, size, 4);
     hpBg.fill({ color: 0x333333 });
-    spriteContainer.addChild(hpBg);
 
-    // HP bar fill
+    // HP bar fill (initially full)
     const hpFill = new Graphics();
-    hpFill.rect(-size / 2, -size / 2 - 6, size, 4);
+    hpFill.rect(-size / 2, -size / 2 - 8, size, 4);
     hpFill.fill({ color: 0x00ff00 });
-    hpFill.label = 'hpFill';
+
+    spriteContainer.addChild(body);
+    spriteContainer.addChild(hpBg);
     spriteContainer.addChild(hpFill);
 
-    return spriteContainer;
-  }
-
-  private updateHpBar(sprite: Container, enemy: Enemy) {
-    const hpFill = sprite.children.find((c) => c.label === 'hpFill');
-    if (hpFill) {
-      const ratio = enemy.hp / enemy.stats.maxHp;
-      hpFill.scale.x = Math.max(0, ratio);
-
-      // Color shift: green → yellow → red
-      if (hpFill instanceof Graphics) {
-        hpFill.tint = ratio > 0.5 ? 0x00ff00 : ratio > 0.25 ? 0xffff00 : 0xff0000;
-      }
-    }
+    return { container: spriteContainer, body, hpBg, hpFill, size };
   }
 
   destroy() {

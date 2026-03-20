@@ -26,7 +26,8 @@ export class GameScene implements Scene {
 
   private engine: GameEngine;
   private container: Container;
-  private systems: SystemManager;
+  private logicSystems: SystemManager;
+  private renderSystems: SystemManager;
   private input: InputManager | null = null;
 
   // Layer containers (render order = add order)
@@ -39,9 +40,9 @@ export class GameScene implements Scene {
   constructor(engine: GameEngine) {
     this.engine = engine;
     this.container = new Container();
-    this.systems = new SystemManager();
+    this.logicSystems = new SystemManager();
+    this.renderSystems = new SystemManager();
 
-    // Create render layers
     this.gridLayer = new Container();
     this.entityLayer = new Container();
     this.projectileLayer = new Container();
@@ -59,35 +60,41 @@ export class GameScene implements Scene {
 
     this.engine.stage.addChild(this.container);
 
-    // Input manager
+    // Input
     this.input = new InputManager(this.container, GAME_MAP);
 
-    // --- Register Renderers (visual-only systems) ---
+    // Grid (rendered once, not a system)
     const gridRenderer = new GridRenderer(this.gridLayer, GAME_MAP);
     gridRenderer.render();
 
-    this.systems.register(new TowerRenderer(this.entityLayer, GAME_MAP));
-    this.systems.register(new EnemyRenderer(this.entityLayer, GAME_MAP));
-    this.systems.register(new ProjectileRenderer(this.projectileLayer));
-    this.systems.register(new EffectRenderer(this.effectLayer));
+    // --- Logic systems (order: input → spawn → move → target → combat → damage → energy) ---
+    this.logicSystems.register(new InputSystem(this.input, this.uiLayer, GAME_MAP));
+    this.logicSystems.register(new WaveSpawner(GAME_MAP));
+    this.logicSystems.register(new EnemyMovement(GAME_MAP));
+    this.logicSystems.register(new TowerTargeting(GAME_MAP));
+    this.logicSystems.register(new CombatSystem());
+    this.logicSystems.register(new DamageSystem());
+    this.logicSystems.register(new EnergySystem());
 
-    // --- Register Game Logic Systems (order matters!) ---
-    this.systems.register(new InputSystem(this.input, this.uiLayer, GAME_MAP));
-    this.systems.register(new WaveSpawner(GAME_MAP));
-    this.systems.register(new EnemyMovement(GAME_MAP));
-    this.systems.register(new TowerTargeting(GAME_MAP));
-    this.systems.register(new CombatSystem());
-    this.systems.register(new DamageSystem());
-    this.systems.register(new EnergySystem());
+    // --- Render systems (read state, update visuals) ---
+    this.renderSystems.register(new TowerRenderer(this.entityLayer, GAME_MAP));
+    this.renderSystems.register(new EnemyRenderer(this.entityLayer, GAME_MAP));
+    this.renderSystems.register(new ProjectileRenderer(this.projectileLayer));
+    this.renderSystems.register(new EffectRenderer(this.effectLayer));
   }
 
   update(dt: number) {
-    this.systems.update(dt);
+    // Logic systems tick every frame (they check phase internally)
+    this.logicSystems.update(dt);
+
+    // Renderers always tick (so sprites update positions even during pause)
+    this.renderSystems.update(dt);
   }
 
   destroy() {
     this.input?.destroy();
-    this.systems.destroy();
+    this.logicSystems.destroy();
+    this.renderSystems.destroy();
     this.engine.stage.removeChild(this.container);
     this.container.destroy({ children: true });
   }

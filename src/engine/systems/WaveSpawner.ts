@@ -1,16 +1,24 @@
-import type { GameSystem, GameMap } from '../../types';
+import type { GameSystem, GameMap, EnemyType, EnemyTrait } from '../../types';
 import { useGameStore } from '../../stores/gameStore';
 import { WAVES } from '../../config/waves';
 import { createEnemy } from '../../game/enemies/factory';
+
+interface SpawnEntry {
+  enemyType: EnemyType;
+  traits: EnemyTrait[];
+  delay: number;
+}
 
 export class WaveSpawner implements GameSystem {
   readonly name = 'waveSpawner';
 
   private map: GameMap;
-  private spawnQueue: { enemyType: string; traits?: string[]; delay: number }[] = [];
+  private spawnQueue: SpawnEntry[] = [];
   private spawnTimer = 0;
-  private waveActive = false;
   private currentSpawnIndex = 0;
+  private waveActive = false;
+  private lastWaveNumber = 0;
+  private allSpawned = false;
 
   constructor(map: GameMap) {
     this.map = map;
@@ -20,32 +28,40 @@ export class WaveSpawner implements GameSystem {
     const store = useGameStore.getState();
 
     if (store.phase !== 'wave') {
+      // Reset if we go back to prep
+      if (store.phase === 'prep' && this.waveActive) {
+        this.waveActive = false;
+        this.allSpawned = false;
+      }
       return;
     }
 
-    // Build spawn queue when wave starts
-    if (!this.waveActive) {
+    // Start wave if new
+    if (!this.waveActive || store.wave !== this.lastWaveNumber) {
       this.startWave(store.wave);
     }
 
-    // Process spawn queue
+    // Spawn enemies on timer
     if (this.currentSpawnIndex < this.spawnQueue.length) {
-      this.spawnTimer += dt * 1000; // convert to ms
+      this.spawnTimer += dt * 1000;
 
-      const nextSpawn = this.spawnQueue[this.currentSpawnIndex];
-      if (this.spawnTimer >= nextSpawn.delay) {
-        this.spawnTimer -= nextSpawn.delay;
-        this.spawnEnemy(nextSpawn);
+      while (
+        this.currentSpawnIndex < this.spawnQueue.length &&
+        this.spawnTimer >= this.spawnQueue[this.currentSpawnIndex].delay
+      ) {
+        const entry = this.spawnQueue[this.currentSpawnIndex];
+        this.spawnTimer -= entry.delay;
+        this.spawnOneEnemy(entry, store.wave);
         this.currentSpawnIndex++;
+      }
+
+      if (this.currentSpawnIndex >= this.spawnQueue.length) {
+        this.allSpawned = true;
       }
     }
 
-    // Check if wave is complete (all spawned + all dead)
-    if (
-      this.currentSpawnIndex >= this.spawnQueue.length &&
-      store.enemies.length === 0
-    ) {
-      this.waveActive = false;
+    // Check wave complete: all spawned AND all enemies dead
+    if (this.allSpawned && store.enemies.length === 0) {
       this.onWaveComplete();
     }
   }
@@ -59,28 +75,33 @@ export class WaveSpawner implements GameSystem {
     this.currentSpawnIndex = 0;
     this.spawnTimer = 0;
     this.waveActive = true;
+    this.allSpawned = false;
+    this.lastWaveNumber = waveNumber;
 
-    // Flatten wave segments into a timed spawn queue
+    // Build flat spawn queue with delays
+    let isFirst = true;
     for (const segment of wave.segments) {
       for (let i = 0; i < segment.count; i++) {
         this.spawnQueue.push({
           enemyType: segment.enemyType,
-          traits: segment.traits,
-          delay: i === 0 && this.spawnQueue.length === 0 ? 500 : segment.interval,
+          traits: (segment.traits as EnemyTrait[]) ?? [],
+          delay: isFirst ? 300 : segment.interval,
         });
+        isFirst = false;
       }
     }
   }
 
-  private spawnEnemy(spawn: { enemyType: string; traits?: string[] }) {
+  private spawnOneEnemy(entry: SpawnEntry, waveNumber: number) {
     const store = useGameStore.getState();
     const spawnCell = this.map.path[0];
+
     const enemy = createEnemy(
-      spawn.enemyType as any,
+      entry.enemyType,
       spawnCell,
       this.map.cellSize,
-      store.wave,
-      (spawn.traits as any) ?? [],
+      waveNumber,
+      entry.traits,
     );
     store.addEnemy(enemy);
   }
@@ -94,6 +115,9 @@ export class WaveSpawner implements GameSystem {
       store.addGold(wave.reward);
       store.addScore(wave.reward);
     }
+
+    this.waveActive = false;
+    this.allSpawned = false;
 
     // Check victory
     if (store.wave >= WAVES.length) {

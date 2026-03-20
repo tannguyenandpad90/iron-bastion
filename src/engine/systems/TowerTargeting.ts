@@ -14,12 +14,23 @@ export class TowerTargeting implements GameSystem {
     const store = useGameStore.getState();
 
     if (store.phase !== 'wave') return;
+    if (store.towers.length === 0) return;
 
-    for (const tower of store.towers) {
+    let changed = false;
+
+    const updatedTowers = store.towers.map((tower) => {
       const target = this.findTarget(tower, store.enemies);
-      if (target?.id !== tower.target) {
-        store.updateTower(tower.id, { target: target?.id ?? null });
+      const newTargetId = target?.id ?? null;
+
+      if (newTargetId !== tower.target) {
+        changed = true;
+        return { ...tower, target: newTargetId };
       }
+      return tower;
+    });
+
+    if (changed) {
+      useGameStore.setState({ towers: updatedTowers });
     }
   }
 
@@ -28,20 +39,24 @@ export class TowerTargeting implements GameSystem {
     const rangeSquared = rangeInPixels * rangeInPixels;
 
     let bestTarget: Enemy | null = null;
-    let bestProgress = -1; // furthest along the path = highest priority
+    let bestProgress = -1;
 
     for (const enemy of enemies) {
       if (!enemy.active) continue;
 
-      // Skip stealth enemies (for now, until detection is implemented)
-      if (enemy.traits.includes('stealth')) continue;
+      // Skip stealth enemies unless very close
+      if (enemy.traits.includes('stealth')) {
+        const detectRange = this.map.cellSize * 1.5;
+        const dx = enemy.position.x - tower.position.x;
+        const dy = enemy.position.y - tower.position.y;
+        if (dx * dx + dy * dy > detectRange * detectRange) continue;
+      }
 
       const dx = enemy.position.x - tower.position.x;
       const dy = enemy.position.y - tower.position.y;
       const distSquared = dx * dx + dy * dy;
 
       if (distSquared <= rangeSquared) {
-        // "First" targeting — prefer enemies furthest along the path
         const progress = enemy.pathIndex + enemy.pathProgress;
         if (progress > bestProgress) {
           bestProgress = progress;

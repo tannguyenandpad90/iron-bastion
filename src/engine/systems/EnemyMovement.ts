@@ -15,11 +15,18 @@ export class EnemyMovement implements GameSystem {
     const store = useGameStore.getState();
 
     if (store.phase !== 'wave') return;
+    if (store.enemies.length === 0) return;
+
+    const surviving = [];
+    let livesLost = 0;
 
     for (const enemy of store.enemies) {
       // Skip stunned enemies
       const isStunned = enemy.statusEffects.some((e) => e.type === 'stun' && e.remaining > 0);
-      if (isStunned) continue;
+      if (isStunned) {
+        surviving.push(enemy);
+        continue;
+      }
 
       // Calculate speed modifier from status effects
       let speedMultiplier = 1;
@@ -38,16 +45,21 @@ export class EnemyMovement implements GameSystem {
       );
 
       if (result.reachedEnd) {
-        // Enemy reached the base
-        store.removeEnemy(enemy.id);
-        store.loseLives(1);
+        livesLost++;
       } else {
-        store.updateEnemy(enemy.id, {
+        surviving.push({
+          ...enemy,
           position: result.position,
           pathIndex: result.pathIndex,
           pathProgress: result.pathProgress,
         });
       }
+    }
+
+    // Batch update
+    store.setEnemies(surviving);
+    if (livesLost > 0) {
+      store.loseLives(livesLost);
     }
   }
 }

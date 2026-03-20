@@ -1,7 +1,9 @@
 import { useGameStore } from '../../stores/gameStore';
+import { getTotalWaves } from '../../game/waves/manager';
 
 export function HUD() {
   const { gold, lives, wave, energy, maxEnergy, score, phase } = useGameStore();
+  const totalWaves = getTotalWaves();
 
   return (
     <div style={styles.container}>
@@ -19,13 +21,17 @@ export function HUD() {
         <span style={styles.stat}>
           <span style={styles.label}>ENERGY</span>
           <span style={{ ...styles.value, color: '#7b68ee' }}>
-            {energy}/{maxEnergy}
+            {Math.floor(energy)}/{maxEnergy}
           </span>
         </span>
       </div>
       <div style={styles.center}>
-        <span style={styles.phase}>{phase.toUpperCase()}</span>
-        <span style={styles.wave}>Wave {wave}</span>
+        <span style={styles.phase}>
+          {phase === 'wave' ? 'DEFENDING' : phase.toUpperCase()}
+        </span>
+        <span style={styles.wave}>
+          Wave {wave} / {totalWaves}
+        </span>
       </div>
       <div style={styles.right}>
         <span style={styles.stat}>
@@ -48,6 +54,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'monospace',
     color: '#eee',
     minHeight: 48,
+    userSelect: 'none',
   },
   left: { display: 'flex', gap: 24 },
   center: { display: 'flex', flexDirection: 'column', alignItems: 'center' },

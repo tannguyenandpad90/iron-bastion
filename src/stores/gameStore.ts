@@ -31,8 +31,10 @@ interface GameStore extends GameState {
   addEnemy: (enemy: Enemy) => void;
   removeEnemy: (id: string) => void;
   updateEnemy: (id: string, updates: Partial<Enemy>) => void;
+  setEnemies: (enemies: Enemy[]) => void;
   addProjectile: (projectile: Projectile) => void;
   removeProjectile: (id: string) => void;
+  setProjectiles: (projectiles: Projectile[]) => void;
   clearEnemies: () => void;
   clearProjectiles: () => void;
 
@@ -84,6 +86,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       towers: [],
       enemies: [],
       projectiles: [],
+      skills: [
+        { type: 'emp', cooldown: 15000, currentCooldown: 0, energyCost: 30 },
+        { type: 'airstrike', cooldown: 20000, currentCooldown: 0, energyCost: 50 },
+        { type: 'freeze', cooldown: 12000, currentCooldown: 0, energyCost: 25 },
+      ],
       selectedTowerType: null,
       selectedTowerId: null,
     }),
@@ -101,9 +108,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((s) => ({
       enemies: s.enemies.map((e) => (e.id === id ? { ...e, ...updates } : e)),
     })),
+  setEnemies: (enemies) => set({ enemies }),
   addProjectile: (p) => set((s) => ({ projectiles: [...s.projectiles, p] })),
   removeProjectile: (id) =>
     set((s) => ({ projectiles: s.projectiles.filter((p) => p.id !== id) })),
+  setProjectiles: (projectiles) => set({ projectiles }),
   clearEnemies: () => set({ enemies: [] }),
   clearProjectiles: () => set({ projectiles: [] }),
 

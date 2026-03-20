@@ -18,7 +18,6 @@ export default function App() {
         <div style={styles.gameArea}>
           <div style={styles.canvasWrapper}>
             <GameCanvas />
-            {/* Overlays positioned over the canvas */}
             <WaveAnnounce />
             <PauseMenu />
             <GameOverScreen />
@@ -40,10 +39,12 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100vh',
     background: '#0a0a1a',
     overflow: 'hidden',
+    userSelect: 'none',
   },
   main: {
     display: 'flex',
     flex: 1,
+    minHeight: 0,
   },
   gameArea: {
     flex: 1,
@@ -51,6 +52,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 0,
   },
   canvasWrapper: {
     position: 'relative',

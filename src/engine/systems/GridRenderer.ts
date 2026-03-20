@@ -37,6 +37,14 @@ export class GridRenderer {
         g.rect(col * cellSize, row * cellSize, cellSize, cellSize);
         g.stroke({ color: 0x333355, width: 1, alpha: 0.3 });
 
+        // Buildable cell subtle indicator
+        if (cellType === 'buildable') {
+          const cx = col * cellSize + cellSize / 2;
+          const cy = row * cellSize + cellSize / 2;
+          g.circle(cx, cy, 2);
+          g.fill({ color: 0x333355, alpha: 0.3 });
+        }
+
         this.container.addChild(g);
 
         // Labels for spawn/base
@@ -45,6 +53,7 @@ export class GridRenderer {
             fontSize: 10,
             fill: 0xffffff,
             fontFamily: 'monospace',
+            fontWeight: 'bold',
           });
           const label = new Text({
             text: cellType === 'spawn' ? 'SPAWN' : 'BASE',
@@ -74,11 +83,25 @@ export class GridRenderer {
       const tx = to.col * cellSize + cellSize / 2;
       const ty = to.row * cellSize + cellSize / 2;
 
+      // Dotted line along path
       const mx = (fx + tx) / 2;
       const my = (fy + ty) / 2;
+      g.circle(mx, my, 2);
+      g.fill({ color: 0xe94560, alpha: 0.3 });
 
-      g.circle(mx, my, 3);
-      g.fill({ color: 0xe94560, alpha: 0.4 });
+      // Small arrow at midpoint
+      const dx = tx - fx;
+      const dy = ty - fy;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const nx = dx / len;
+      const ny = dy / len;
+      const arrowSize = 4;
+
+      g.moveTo(mx + nx * arrowSize, my + ny * arrowSize);
+      g.lineTo(mx - ny * arrowSize * 0.5 - nx * arrowSize * 0.3, my + nx * arrowSize * 0.5 - ny * arrowSize * 0.3);
+      g.lineTo(mx + ny * arrowSize * 0.5 - nx * arrowSize * 0.3, my - nx * arrowSize * 0.5 - ny * arrowSize * 0.3);
+      g.closePath();
+      g.fill({ color: 0xe94560, alpha: 0.25 });
     }
 
     this.container.addChild(g);

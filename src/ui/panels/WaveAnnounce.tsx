@@ -2,24 +2,32 @@ import { useGameStore } from '../../stores/gameStore';
 import { getTotalWaves } from '../../game/waves/manager';
 
 export function WaveAnnounce() {
-  const { phase, wave } = useGameStore();
+  const { phase, wave, setPhase, nextWave } = useGameStore();
 
   if (phase !== 'prep') return null;
 
   const totalWaves = getTotalWaves();
-  const nextWave = wave + 1;
+  const nextWaveNum = wave + 1;
+
+  const handleStart = () => {
+    nextWave();
+    setPhase('wave');
+  };
 
   return (
     <div style={styles.container}>
       <div style={styles.text}>
-        {wave === 0 ? 'READY TO DEFEND' : `WAVE ${wave} CLEARED`}
+        {wave === 0 ? 'IRON BASTION ONLINE' : `WAVE ${wave} CLEARED`}
       </div>
-      {nextWave <= totalWaves && (
+      {nextWaveNum <= totalWaves && (
         <div style={styles.next}>
-          Wave {nextWave} / {totalWaves}
+          Next: Wave {nextWaveNum} / {totalWaves}
         </div>
       )}
-      <div style={styles.hint}>Press [SPACE] to start</div>
+      <button style={styles.startBtn} onClick={handleStart}>
+        START WAVE
+      </button>
+      <div style={styles.hint}>or press [SPACE]</div>
     </div>
   );
 }
@@ -32,8 +40,11 @@ const styles: Record<string, React.CSSProperties> = {
     transform: 'translate(-50%, -50%)',
     textAlign: 'center',
     fontFamily: 'monospace',
-    pointerEvents: 'none',
     zIndex: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
   },
   text: {
     fontSize: 28,
@@ -45,12 +56,23 @@ const styles: Record<string, React.CSSProperties> = {
   next: {
     fontSize: 14,
     color: '#888',
+  },
+  startBtn: {
     marginTop: 8,
+    padding: '12px 32px',
+    border: '2px solid #e94560',
+    borderRadius: 4,
+    background: 'rgba(233, 69, 96, 0.15)',
+    color: '#e94560',
+    cursor: 'pointer',
+    fontFamily: 'monospace',
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 3,
+    transition: 'all 0.2s',
   },
   hint: {
-    fontSize: 12,
-    color: '#e94560',
-    marginTop: 16,
-    animation: 'pulse 1.5s ease-in-out infinite',
+    fontSize: 11,
+    color: '#555',
   },
 };

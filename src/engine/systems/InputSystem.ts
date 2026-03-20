@@ -19,12 +19,10 @@ export class InputSystem implements GameSystem {
     this.input = input;
     this.map = map;
 
-    // Hover highlight
     this.hoverGraphic = new Graphics();
     this.hoverGraphic.visible = false;
     uiLayer.addChild(this.hoverGraphic);
 
-    // Range preview circle
     this.rangeGraphic = new Graphics();
     this.rangeGraphic.visible = false;
     uiLayer.addChild(this.rangeGraphic);
@@ -37,7 +35,6 @@ export class InputSystem implements GameSystem {
   }
 
   update(_dt: number) {
-    // Update hover visual
     const store = useGameStore.getState();
     const { cellSize } = this.map;
 
@@ -47,33 +44,35 @@ export class InputSystem implements GameSystem {
       const hasTower = store.towers.some(
         (t) => t.gridPos.col === col && t.gridPos.row === row,
       );
-
       const canPlace = cellType === 'buildable' && !hasTower;
+      const towerConfig = TOWER_CONFIG[store.selectedTowerType];
+      const canAfford = store.gold >= towerConfig.cost;
+      const valid = canPlace && canAfford;
 
+      // Hover highlight
       this.hoverGraphic.clear();
       this.hoverGraphic.rect(col * cellSize, row * cellSize, cellSize, cellSize);
       this.hoverGraphic.fill({
-        color: canPlace ? 0x00ff00 : 0xff0000,
-        alpha: 0.25,
+        color: valid ? 0x00ff00 : 0xff0000,
+        alpha: 0.2,
       });
       this.hoverGraphic.stroke({
-        color: canPlace ? 0x00ff00 : 0xff0000,
+        color: valid ? 0x00ff00 : 0xff0000,
         width: 2,
-        alpha: 0.6,
+        alpha: 0.5,
       });
       this.hoverGraphic.visible = true;
 
-      // Show range preview
+      // Range preview
       if (canPlace) {
-        const towerConfig = TOWER_CONFIG[store.selectedTowerType];
         const rangeInPixels = towerConfig.range * cellSize;
         const cx = col * cellSize + cellSize / 2;
         const cy = row * cellSize + cellSize / 2;
 
         this.rangeGraphic.clear();
         this.rangeGraphic.circle(cx, cy, rangeInPixels);
-        this.rangeGraphic.fill({ color: 0xffffff, alpha: 0.05 });
-        this.rangeGraphic.stroke({ color: 0xffffff, width: 1, alpha: 0.2 });
+        this.rangeGraphic.fill({ color: 0xffffff, alpha: 0.04 });
+        this.rangeGraphic.stroke({ color: 0xffffff, width: 1, alpha: 0.15 });
         this.rangeGraphic.visible = true;
       } else {
         this.rangeGraphic.visible = false;
@@ -88,13 +87,12 @@ export class InputSystem implements GameSystem {
     const store = useGameStore.getState();
 
     if (event.button === 'right') {
-      // Right click: deselect
       store.selectTowerType(null);
       store.selectTower(null);
       return;
     }
 
-    // Left click: try to place tower
+    // Place tower
     if (store.selectedTowerType && event.cellType === 'buildable') {
       const hasTower = store.towers.some(
         (t) =>
@@ -111,12 +109,13 @@ export class InputSystem implements GameSystem {
             this.map.cellSize,
           );
           store.addTower(tower);
+          return;
         }
       }
       return;
     }
 
-    // Left click on existing tower: select it
+    // Click existing tower to select
     const clickedTower = store.towers.find(
       (t) =>
         t.gridPos.col === event.gridPos.col &&
@@ -151,10 +150,9 @@ export class InputSystem implements GameSystem {
         store.selectTowerType('aoe');
         break;
       case ' ':
-        // Space: start wave / pause
         if (store.phase === 'prep') {
-          store.setPhase('wave');
           store.nextWave();
+          store.setPhase('wave');
         } else if (store.phase === 'wave') {
           store.setPhase('paused');
         } else if (store.phase === 'paused') {

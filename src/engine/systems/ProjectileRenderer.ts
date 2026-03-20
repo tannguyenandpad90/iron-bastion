@@ -17,7 +17,7 @@ export class ProjectileRenderer implements GameSystem {
     const projectiles = useGameStore.getState().projectiles;
     const activeIds = new Set(projectiles.map((p) => p.id));
 
-    // Remove dead projectiles
+    // Remove dead
     for (const [id, sprite] of this.sprites) {
       if (!activeIds.has(id)) {
         this.container.removeChild(sprite);
@@ -32,8 +32,14 @@ export class ProjectileRenderer implements GameSystem {
 
       if (!sprite) {
         sprite = new Graphics();
-        sprite.circle(0, 0, proj.aoeRadius ? 4 : 3);
-        sprite.fill({ color: proj.aoeRadius ? 0xff3366 : 0xffdd44 });
+        const isAoe = proj.aoeRadius && proj.aoeRadius > 0;
+        const size = isAoe ? 5 : 3;
+        const color = isAoe ? 0xff3366 : 0xffdd44;
+        sprite.circle(0, 0, size);
+        sprite.fill({ color });
+        // Trail glow
+        sprite.circle(0, 0, size + 2);
+        sprite.fill({ color, alpha: 0.3 });
         this.sprites.set(proj.id, sprite);
         this.container.addChild(sprite);
       }
