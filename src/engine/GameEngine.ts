@@ -16,25 +16,30 @@ export class GameEngine {
     this.sceneManager = new SceneManager();
   }
 
-  async init(canvas: HTMLCanvasElement) {
+  async init(parentElement: HTMLElement) {
+    const width = GAME_MAP.width * GAME_MAP.cellSize;
+    const height = GAME_MAP.height * GAME_MAP.cellSize;
+
     await this.app.init({
-      canvas,
-      width: GAME_MAP.width * GAME_MAP.cellSize,
-      height: GAME_MAP.height * GAME_MAP.cellSize,
+      width,
+      height,
       backgroundColor: 0x1a1a2e,
       antialias: true,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true,
     });
+
+    // PixiJS v8 creates its own canvas — append it to our container
+    parentElement.appendChild(this.app.canvas);
+
+    // Prevent right-click context menu
+    this.app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     this.app.stage.addChild(this.stage);
 
-    // Prevent right-click context menu on canvas
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    // Register scenes
+    // Register and start game scene
     const gameScene = new GameScene(this);
     this.sceneManager.register(gameScene);
-
-    // Start with game scene
     this.sceneManager.switch('game');
   }
 
@@ -65,15 +70,13 @@ export class GameEngine {
     const dt = (now - this.lastTime) / 1000;
     this.lastTime = now;
 
-    // Clamp dt to prevent spiral of death after tab switch
     const clampedDt = Math.min(dt, 0.1);
-
     this.sceneManager.update(clampedDt);
   };
 
   destroy() {
     this.stop();
     this.sceneManager.destroy();
-    this.app.destroy(true);
+    this.app.destroy({ removeView: true }, { children: true });
   }
 }

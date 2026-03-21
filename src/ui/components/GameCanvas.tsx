@@ -9,30 +9,41 @@ export function getEngine(): GameEngine | null {
 }
 
 export function GameCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const engineRef = useRef<GameEngine | null>(null);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!containerRef.current) return;
 
+    // Prevent double-init from StrictMode
+    if (engineRef.current) return;
+
+    const container = containerRef.current;
     const engine = new GameEngine();
+    engineRef.current = engine;
     engineInstance = engine;
 
-    engine.init(canvasRef.current).then(() => {
+    engine.init(container).then(() => {
       engine.start();
     });
 
     return () => {
       engine.destroy();
+      engineRef.current = null;
       engineInstance = null;
+      // Clean up any leftover canvas
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
     };
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
+    <div
+      ref={containerRef}
       style={{
         display: 'block',
-        imageRendering: 'pixelated',
+        lineHeight: 0,
       }}
     />
   );

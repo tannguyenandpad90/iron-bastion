@@ -1,4 +1,4 @@
-import { Container, FederatedPointerEvent } from 'pixi.js';
+import { Container, FederatedPointerEvent, Rectangle } from 'pixi.js';
 import type { GridPosition, WorldPosition, CellType, GridClickEvent, HoverEvent, GameMap } from '../types';
 
 type GridClickHandler = (event: GridClickEvent) => void;
@@ -17,18 +17,18 @@ export class InputManager {
   constructor(interactiveArea: Container, map: GameMap) {
     this.map = map;
 
-    // Make the container interactive for PixiJS events
+    // Make the container interactive
     interactiveArea.eventMode = 'static';
-    interactiveArea.hitArea = {
-      contains: () => true,
-    };
+    interactiveArea.hitArea = new Rectangle(
+      0, 0,
+      map.width * map.cellSize,
+      map.height * map.cellSize,
+    );
 
-    // Pointer events on canvas
     interactiveArea.on('pointerdown', this.onPointerDown);
     interactiveArea.on('pointermove', this.onPointerMove);
     interactiveArea.on('rightclick', this.onRightClick);
 
-    // Keyboard events on window
     this.boundKeyDown = this.onKeyDown.bind(this);
     this.boundKeyUp = this.onKeyUp.bind(this);
     window.addEventListener('keydown', this.boundKeyDown);
@@ -88,8 +88,14 @@ export class InputManager {
   }
 
   // --- Internal handlers ---
+  private getWorldPos(e: FederatedPointerEvent): WorldPosition {
+    // PixiJS v8: use getLocalPosition to get coords relative to stage
+    const local = e.getLocalPosition(e.currentTarget as Container);
+    return { x: local.x, y: local.y };
+  }
+
   private onPointerDown = (e: FederatedPointerEvent) => {
-    if (e.button !== 0) return; // left click only
+    if (e.button !== 0) return;
     this.emitGridClick(e, 'left');
   };
 
@@ -99,7 +105,7 @@ export class InputManager {
   };
 
   private emitGridClick(e: FederatedPointerEvent, button: 'left' | 'right') {
-    const worldPos: WorldPosition = { x: e.globalX, y: e.globalY };
+    const worldPos = this.getWorldPos(e);
     const gridPos = this.worldToGrid(worldPos);
     if (!gridPos) return;
 
@@ -116,7 +122,7 @@ export class InputManager {
   }
 
   private onPointerMove = (e: FederatedPointerEvent) => {
-    const worldPos: WorldPosition = { x: e.globalX, y: e.globalY };
+    const worldPos = this.getWorldPos(e);
     const gridPos = this.worldToGrid(worldPos);
 
     const event: HoverEvent = { gridPos, worldPos };
