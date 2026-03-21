@@ -11,6 +11,10 @@ export class EnemyMovement implements GameSystem {
     this.map = map;
   }
 
+  setMap(map: GameMap) {
+    this.map = map;
+  }
+
   update(dt: number) {
     const store = useGameStore.getState();
     if (store.phase !== 'wave' || store.enemies.length === 0) return;

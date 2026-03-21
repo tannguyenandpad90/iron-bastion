@@ -1,9 +1,10 @@
 import { Container } from 'pixi.js';
-import type { Scene } from '../../types';
+import type { Scene, MapId } from '../../types';
 import type { GameEngine } from '../GameEngine';
 import { SystemManager } from '../SystemManager';
 import { InputManager } from '../InputManager';
 import { getActiveMap } from '../../config/game';
+import { getMap } from '../../config/maps';
 import { useGameStore } from '../../stores/gameStore';
 
 import { GridRenderer } from '../systems/GridRenderer';
@@ -35,6 +36,9 @@ export class GameScene implements Scene {
   private effectLayer: Container;
   private uiLayer: Container;
 
+  private currentMapId: MapId = 'canyon';
+  private gridRenderer: GridRenderer | null = null;
+
   constructor(engine: GameEngine) {
     this.engine = engine;
     this.container = new Container();
@@ -50,6 +54,7 @@ export class GameScene implements Scene {
 
   init() {
     const map = getActiveMap(useGameStore.getState().mapId);
+    this.currentMapId = map.id;
 
     this.container.addChild(this.gridLayer);
     this.container.addChild(this.entityLayer);
@@ -61,8 +66,8 @@ export class GameScene implements Scene {
 
     this.input = new InputManager(this.container, map);
 
-    const gridRenderer = new GridRenderer(this.gridLayer, map);
-    gridRenderer.render();
+    this.gridRenderer = new GridRenderer(this.gridLayer, map);
+    this.gridRenderer.render();
 
     this.logicSystems.register(new InputSystem(this.input, this.uiLayer, map));
     this.logicSystems.register(new WaveSpawner(map));
@@ -79,8 +84,40 @@ export class GameScene implements Scene {
   }
 
   update(dt: number) {
+    // Check if map changed (wave switched map)
+    const storeMapId = useGameStore.getState().mapId;
+    if (storeMapId !== this.currentMapId) {
+      this.onMapChanged(storeMapId);
+    }
+
     this.logicSystems.update(dt);
     this.renderSystems.update(dt);
+  }
+
+  private onMapChanged(newMapId: MapId) {
+    const newMap = getMap(newMapId);
+    this.currentMapId = newMapId;
+
+    // Clear towers (they don't carry over between maps)
+    const store = useGameStore.getState();
+    store.setTowers([]);
+    store.clearProjectiles();
+
+    // Re-render grid
+    if (this.gridRenderer) {
+      this.gridRenderer.setMap(newMap);
+      this.gridRenderer.render();
+    }
+
+    // Update systems that hold map reference
+    const waveSpawner = this.logicSystems.get<WaveSpawner>('waveSpawner');
+    if (waveSpawner) waveSpawner.setMap(newMap);
+
+    const enemyMovement = this.logicSystems.get<EnemyMovement>('enemyMovement');
+    if (enemyMovement) enemyMovement.setMap(newMap);
+
+    const towerTargeting = this.logicSystems.get<TowerTargeting>('towerTargeting');
+    if (towerTargeting) towerTargeting.setMap(newMap);
   }
 
   destroy() {

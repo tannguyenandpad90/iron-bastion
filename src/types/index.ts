@@ -121,6 +121,7 @@ export interface Wave {
   segments: WaveSegment[];
   reward: number;
   isBoss?: boolean;
+  mapId?: MapId;
 }
 
 // --- Skill ---

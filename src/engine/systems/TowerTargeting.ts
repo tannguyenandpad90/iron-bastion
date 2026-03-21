@@ -10,6 +10,10 @@ export class TowerTargeting implements GameSystem {
     this.map = map;
   }
 
+  setMap(map: GameMap) {
+    this.map = map;
+  }
+
   update(_dt: number) {
     const store = useGameStore.getState();
     if (store.phase !== 'wave' || store.towers.length === 0) return;

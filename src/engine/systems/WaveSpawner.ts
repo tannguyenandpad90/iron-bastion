@@ -2,6 +2,8 @@ import type { GameSystem, GameMap, EnemyType, EnemyTrait } from '../../types';
 import { useGameStore } from '../../stores/gameStore';
 import { WAVES } from '../../config/waves';
 import { createEnemy } from '../../game/enemies/factory';
+import { getMap } from '../../config/maps';
+import { audio } from '../AudioManager';
 
 interface SpawnEntry {
   enemyType: EnemyType;
@@ -24,11 +26,15 @@ export class WaveSpawner implements GameSystem {
     this.map = map;
   }
 
+  /** Called by GameScene when map changes */
+  setMap(map: GameMap) {
+    this.map = map;
+  }
+
   update(dt: number) {
     const store = useGameStore.getState();
 
     if (store.phase !== 'wave') {
-      // Reset if we go back to prep
       if (store.phase === 'prep' && this.waveActive) {
         this.waveActive = false;
         this.allSpawned = false;
@@ -36,12 +42,10 @@ export class WaveSpawner implements GameSystem {
       return;
     }
 
-    // Start wave if new
     if (!this.waveActive || store.wave !== this.lastWaveNumber) {
       this.startWave(store.wave);
     }
 
-    // Spawn enemies on timer
     if (this.currentSpawnIndex < this.spawnQueue.length) {
       this.spawnTimer += dt * 1000;
 
@@ -60,7 +64,6 @@ export class WaveSpawner implements GameSystem {
       }
     }
 
-    // Check wave complete: all spawned AND all enemies dead
     if (this.allSpawned && store.enemies.length === 0) {
       this.onWaveComplete();
     }
@@ -71,6 +74,15 @@ export class WaveSpawner implements GameSystem {
     const wave = WAVES[waveIndex];
     if (!wave) return;
 
+    // Switch map if wave specifies a different one
+    if (wave.mapId) {
+      const store = useGameStore.getState();
+      if (wave.mapId !== store.mapId) {
+        store.setMapId(wave.mapId);
+        this.map = getMap(wave.mapId);
+      }
+    }
+
     this.spawnQueue = [];
     this.currentSpawnIndex = 0;
     this.spawnTimer = 0;
@@ -78,7 +90,8 @@ export class WaveSpawner implements GameSystem {
     this.allSpawned = false;
     this.lastWaveNumber = waveNumber;
 
-    // Build flat spawn queue with delays
+    audio.play('wave_start');
+
     let isFirst = true;
     for (const segment of wave.segments) {
       for (let i = 0; i < segment.count; i++) {
@@ -116,12 +129,14 @@ export class WaveSpawner implements GameSystem {
       store.addScore(wave.reward);
     }
 
+    audio.play('wave_clear');
+
     this.waveActive = false;
     this.allSpawned = false;
 
-    // Check victory
     if (store.wave >= WAVES.length) {
       store.setPhase('victory');
+      audio.play('victory');
     } else {
       store.setPhase('prep');
     }
