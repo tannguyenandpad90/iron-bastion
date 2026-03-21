@@ -21,6 +21,16 @@ const MAP_THEMES: Record<MapId, {
     buildGrid: 0x402828, blocked: 0x150e0e, spawn: 0xff4444,
     base: 0x44ff88, bg: 0x1a1010, accent: 0xff4444,
   },
+  spiral: {
+    path: 0x2a2a3a, pathEdge: 0x4a4a6a, buildable: 0x181828,
+    buildGrid: 0x282840, blocked: 0x0e0e18, spawn: 0xff8800,
+    base: 0xff44ff, bg: 0x101018, accent: 0xff8800,
+  },
+  gauntlet: {
+    path: 0x3a3228, pathEdge: 0x6a5a40, buildable: 0x201c14,
+    buildGrid: 0x403420, blocked: 0x151008, spawn: 0x44ff44,
+    base: 0xff4444, bg: 0x1a1408, accent: 0x44ff44,
+  },
 };
 
 export class GridRenderer {

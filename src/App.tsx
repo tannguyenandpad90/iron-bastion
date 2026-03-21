@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { GameCanvas } from './ui/components/GameCanvas';
 import { HUD } from './ui/components/HUD';
 import { TowerShop } from './ui/panels/TowerShop';
@@ -14,6 +14,10 @@ export default function App() {
   const selectedTowerId = useGameStore((s) => s.selectedTowerId);
   const [gameStarted, setGameStarted] = useState(false);
 
+  const handleQuit = useCallback(() => {
+    setGameStarted(false);
+  }, []);
+
   if (!gameStarted) {
     return (
       <div style={styles.root}>
@@ -28,10 +32,10 @@ export default function App() {
       <div style={styles.main}>
         <div style={styles.gameArea}>
           <div style={styles.canvasWrapper}>
-            <GameCanvas />
+            <GameCanvas key={useGameStore.getState().mapId} />
             <WaveAnnounce />
-            <PauseMenu />
-            <GameOverScreen />
+            <PauseMenu onQuit={handleQuit} />
+            <GameOverScreen onQuit={handleQuit} />
           </div>
           <SkillBar />
         </div>
@@ -45,31 +49,14 @@ export default function App() {
 
 const styles: Record<string, React.CSSProperties> = {
   root: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    background: '#0a0a1a',
-    overflow: 'hidden',
-    userSelect: 'none',
+    display: 'flex', flexDirection: 'column', height: '100vh',
+    background: '#0a0a1a', overflow: 'hidden', userSelect: 'none',
   },
-  main: {
-    display: 'flex',
-    flex: 1,
-    minHeight: 0,
-  },
+  main: { display: 'flex', flex: 1, minHeight: 0 },
   gameArea: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 0,
+    flex: 1, display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', minWidth: 0,
   },
-  canvasWrapper: {
-    position: 'relative',
-    display: 'inline-block',
-  },
-  sidebar: {
-    flexShrink: 0,
-  },
+  canvasWrapper: { position: 'relative', display: 'inline-block' },
+  sidebar: { flexShrink: 0 },
 };

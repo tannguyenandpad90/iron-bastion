@@ -1,5 +1,6 @@
 import type { Wave, WaveSegment } from '../../types';
 import { WAVES } from '../../config/waves';
+import { MAPS } from '../../config/maps';
 
 export function getWave(waveNumber: number): Wave | null {
   const index = waveNumber - 1;
@@ -35,4 +36,22 @@ export function isBossWave(waveNumber: number): boolean {
 
 export function getTotalWaves(): number {
   return WAVES.length;
+}
+
+export function getWaveMapName(waveNumber: number): string | null {
+  const wave = getWave(waveNumber);
+  if (!wave?.mapId) return null;
+  const map = MAPS[wave.mapId];
+  return map?.name ?? null;
+}
+
+export function getWaveEnemyPreview(waveNumber: number): { type: string; count: number; traits: string }[] | null {
+  const wave = getWave(waveNumber);
+  if (!wave) return null;
+
+  return wave.segments.map((seg) => ({
+    type: seg.enemyType,
+    count: seg.count,
+    traits: seg.traits?.join(', ') ?? '',
+  }));
 }

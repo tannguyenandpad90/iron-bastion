@@ -1,33 +1,33 @@
 import type { Wave } from '../types';
 
 export const WAVES: Wave[] = [
-  // Wave 1: canyon — intro swarm
+  // Wave 1: CANYON — intro swarm
   {
     mapId: 'canyon',
     segments: [{ enemyType: 'swarm', count: 8, interval: 600 }],
     reward: 50,
   },
-  // Wave 2: canyon — fast + swarm
+  // Wave 2: CROSSROADS — fast + swarm
   {
-    mapId: 'canyon',
+    mapId: 'crossroads',
     segments: [
       { enemyType: 'fast', count: 5, interval: 800 },
       { enemyType: 'swarm', count: 6, interval: 500 },
     ],
     reward: 75,
   },
-  // Wave 3: canyon — tanks + flyers
+  // Wave 3: FORTRESS — tanks + flyers
   {
-    mapId: 'canyon',
+    mapId: 'fortress',
     segments: [
       { enemyType: 'tank', count: 3, interval: 1500 },
       { enemyType: 'flyer', count: 4, interval: 600, traits: ['flying'] },
     ],
     reward: 100,
   },
-  // Wave 4: crossroads — swarm rush + healer
+  // Wave 4: SPIRAL — swarm rush + healer
   {
-    mapId: 'crossroads',
+    mapId: 'spiral',
     segments: [
       { enemyType: 'swarm', count: 15, interval: 350 },
       { enemyType: 'healer', count: 2, interval: 2000 },
@@ -35,9 +35,9 @@ export const WAVES: Wave[] = [
     ],
     reward: 120,
   },
-  // Wave 5: crossroads — BOSS
+  // Wave 5: GAUNTLET — BOSS
   {
-    mapId: 'crossroads',
+    mapId: 'gauntlet',
     segments: [
       { enemyType: 'fast', count: 4, interval: 600 },
       { enemyType: 'boss', count: 1, interval: 2000 },
@@ -47,9 +47,9 @@ export const WAVES: Wave[] = [
     reward: 300,
     isBoss: true,
   },
-  // Wave 6: crossroads — stealth + shields + flyers
+  // Wave 6: CANYON — stealth + shields + flyers
   {
-    mapId: 'crossroads',
+    mapId: 'canyon',
     segments: [
       { enemyType: 'flyer', count: 6, interval: 500, traits: ['flying'] },
       { enemyType: 'fast', count: 8, interval: 500, traits: ['stealth'] },
@@ -57,9 +57,9 @@ export const WAVES: Wave[] = [
     ],
     reward: 150,
   },
-  // Wave 7: fortress — regen + healer combo
+  // Wave 7: CROSSROADS — regen + healer combo
   {
-    mapId: 'fortress',
+    mapId: 'crossroads',
     segments: [
       { enemyType: 'healer', count: 3, interval: 1500 },
       { enemyType: 'tank', count: 6, interval: 1200, traits: ['regen'] },
@@ -68,7 +68,7 @@ export const WAVES: Wave[] = [
     ],
     reward: 175,
   },
-  // Wave 8: fortress — massive swarm + stealth flyers
+  // Wave 8: FORTRESS — massive swarm + stealth flyers
   {
     mapId: 'fortress',
     segments: [
@@ -78,9 +78,9 @@ export const WAVES: Wave[] = [
     ],
     reward: 200,
   },
-  // Wave 9: fortress — elite everything
+  // Wave 9: SPIRAL — elite everything
   {
-    mapId: 'fortress',
+    mapId: 'spiral',
     segments: [
       { enemyType: 'tank', count: 5, interval: 1000, traits: ['shield', 'regen'] },
       { enemyType: 'fast', count: 10, interval: 400, traits: ['stealth'] },
@@ -90,9 +90,9 @@ export const WAVES: Wave[] = [
     ],
     reward: 250,
   },
-  // Wave 10: canyon — FINAL BOSS (back to start, full circle)
+  // Wave 10: GAUNTLET — FINAL BOSS
   {
-    mapId: 'canyon',
+    mapId: 'gauntlet',
     segments: [
       { enemyType: 'tank', count: 4, interval: 800, traits: ['shield'] },
       { enemyType: 'healer', count: 3, interval: 1000 },
