@@ -24,7 +24,7 @@ export interface Entity {
 export type EntityType = 'tower' | 'enemy' | 'projectile' | 'effect';
 
 // --- Tower ---
-export type TowerType = 'cannon' | 'laser' | 'aoe';
+export type TowerType = 'cannon' | 'laser' | 'aoe' | 'sniper' | 'tesla';
 export type TargetingMode = 'first' | 'strongest' | 'closest';
 
 export interface TowerStats {
@@ -56,9 +56,9 @@ export interface Tower extends Entity {
 }
 
 // --- Enemy ---
-export type EnemyType = 'fast' | 'tank' | 'swarm' | 'boss';
-export type EnemyTrait = 'shield' | 'stealth' | 'regen';
-export type StatusEffect = 'slow' | 'burn' | 'stun';
+export type EnemyType = 'fast' | 'tank' | 'swarm' | 'boss' | 'healer' | 'flyer';
+export type EnemyTrait = 'shield' | 'stealth' | 'regen' | 'flying';
+export type StatusEffect = 'slow' | 'burn' | 'stun' | 'chain';
 
 export interface EnemyStats {
   maxHp: number;
@@ -74,12 +74,11 @@ export interface ActiveStatusEffect {
   intensity: number;
 }
 
-// Boss-specific phase mechanic
 export interface BossPhase {
-  hpThreshold: number; // triggers when HP drops below this %
+  hpThreshold: number;
   type: 'shield' | 'enrage' | 'spawn';
   active: boolean;
-  duration: number;   // ms, 0 = permanent
+  duration: number;
   remaining: number;
 }
 
@@ -94,6 +93,7 @@ export interface Enemy extends Entity {
   statusEffects: ActiveStatusEffect[];
   isBoss: boolean;
   bossPhases?: BossPhase[];
+  healCooldown?: number;
 }
 
 // --- Projectile ---
@@ -106,6 +106,7 @@ export interface Projectile extends Entity {
   aoeRadius?: number;
   statusOnHit?: { type: StatusEffect; duration: number; intensity: number };
   critApplied?: boolean;
+  chainCount?: number;
 }
 
 // --- Wave ---
@@ -134,6 +135,8 @@ export interface Skill {
 
 // --- Game State ---
 export type GamePhase = 'prep' | 'wave' | 'paused' | 'gameover' | 'victory';
+export type GameSpeed = 1 | 1.5 | 2 | 3;
+export type MapId = 'canyon' | 'crossroads' | 'fortress';
 
 export interface GameState {
   phase: GamePhase;
@@ -144,12 +147,16 @@ export interface GameState {
   energy: number;
   maxEnergy: number;
   score: number;
+  gameSpeed: GameSpeed;
+  mapId: MapId;
 }
 
 // --- Map ---
 export type CellType = 'path' | 'buildable' | 'blocked' | 'spawn' | 'base';
 
 export interface GameMap {
+  id: MapId;
+  name: string;
   width: number;
   height: number;
   cellSize: number;

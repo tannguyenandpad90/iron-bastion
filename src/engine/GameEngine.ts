@@ -1,7 +1,8 @@
 import { Application, Container } from 'pixi.js';
 import { SceneManager } from './SceneManager';
-import { GAME_MAP } from '../config/game';
+import { getActiveMap } from '../config/game';
 import { GameScene } from './scenes/GameScene';
+import { useGameStore } from '../stores/gameStore';
 
 export class GameEngine {
   app: Application;
@@ -18,8 +19,9 @@ export class GameEngine {
   }
 
   async init(parentElement: HTMLElement) {
-    const width = GAME_MAP.width * GAME_MAP.cellSize;
-    const height = GAME_MAP.height * GAME_MAP.cellSize;
+    const map = getActiveMap(useGameStore.getState().mapId);
+    const width = map.width * map.cellSize;
+    const height = map.height * map.cellSize;
 
     await this.app.init({
       width,
@@ -30,17 +32,13 @@ export class GameEngine {
 
     if (this.destroyed) return;
 
-    // Append PixiJS canvas to container
     const canvas = this.app.canvas as HTMLCanvasElement;
     canvas.style.display = 'block';
     parentElement.appendChild(canvas);
-
-    // Prevent right-click context menu
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     this.app.stage.addChild(this.stage);
 
-    // Register and start game scene
     const gameScene = new GameScene(this);
     this.sceneManager.register(gameScene);
     this.sceneManager.switch('game');
@@ -58,24 +56,18 @@ export class GameEngine {
     this.app.ticker.remove(this.tick);
   }
 
-  pause() {
-    this.running = false;
-  }
-
-  resume() {
-    this.running = true;
-    this.lastTime = performance.now();
-  }
-
   private tick = () => {
     if (!this.running) return;
 
     const now = performance.now();
-    const dt = (now - this.lastTime) / 1000;
+    const rawDt = (now - this.lastTime) / 1000;
     this.lastTime = now;
 
-    const clampedDt = Math.min(dt, 0.1);
-    this.sceneManager.update(clampedDt);
+    // Apply game speed multiplier
+    const gameSpeed = useGameStore.getState().gameSpeed;
+    const dt = Math.min(rawDt, 0.1) * gameSpeed;
+
+    this.sceneManager.update(dt);
   };
 
   destroy() {
@@ -85,7 +77,7 @@ export class GameEngine {
     try {
       this.app.destroy({ removeView: true }, { children: true });
     } catch {
-      // Ignore errors during cleanup
+      // Ignore cleanup errors
     }
   }
 }

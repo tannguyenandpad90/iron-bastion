@@ -3,16 +3,15 @@ import type { Scene } from '../../types';
 import type { GameEngine } from '../GameEngine';
 import { SystemManager } from '../SystemManager';
 import { InputManager } from '../InputManager';
-import { GAME_MAP } from '../../config/game';
+import { getActiveMap } from '../../config/game';
+import { useGameStore } from '../../stores/gameStore';
 
-// Renderers
 import { GridRenderer } from '../systems/GridRenderer';
 import { TowerRenderer } from '../systems/TowerRenderer';
 import { EnemyRenderer } from '../systems/EnemyRenderer';
 import { ProjectileRenderer } from '../systems/ProjectileRenderer';
 import { EffectRenderer } from '../systems/EffectRenderer';
 
-// Game Systems
 import { WaveSpawner } from '../systems/WaveSpawner';
 import { EnemyMovement } from '../systems/EnemyMovement';
 import { TowerTargeting } from '../systems/TowerTargeting';
@@ -30,7 +29,6 @@ export class GameScene implements Scene {
   private renderSystems: SystemManager;
   private input: InputManager | null = null;
 
-  // Layer containers (render order = add order)
   private gridLayer: Container;
   private entityLayer: Container;
   private projectileLayer: Container;
@@ -51,7 +49,8 @@ export class GameScene implements Scene {
   }
 
   init() {
-    // Add layers in render order
+    const map = getActiveMap(useGameStore.getState().mapId);
+
     this.container.addChild(this.gridLayer);
     this.container.addChild(this.entityLayer);
     this.container.addChild(this.projectileLayer);
@@ -60,34 +59,27 @@ export class GameScene implements Scene {
 
     this.engine.stage.addChild(this.container);
 
-    // Input
-    this.input = new InputManager(this.container, GAME_MAP);
+    this.input = new InputManager(this.container, map);
 
-    // Grid (rendered once, not a system)
-    const gridRenderer = new GridRenderer(this.gridLayer, GAME_MAP);
+    const gridRenderer = new GridRenderer(this.gridLayer, map);
     gridRenderer.render();
 
-    // --- Logic systems (order: input → spawn → move → target → combat → damage → energy) ---
-    this.logicSystems.register(new InputSystem(this.input, this.uiLayer, GAME_MAP));
-    this.logicSystems.register(new WaveSpawner(GAME_MAP));
-    this.logicSystems.register(new EnemyMovement(GAME_MAP));
-    this.logicSystems.register(new TowerTargeting(GAME_MAP));
+    this.logicSystems.register(new InputSystem(this.input, this.uiLayer, map));
+    this.logicSystems.register(new WaveSpawner(map));
+    this.logicSystems.register(new EnemyMovement(map));
+    this.logicSystems.register(new TowerTargeting(map));
     this.logicSystems.register(new CombatSystem());
     this.logicSystems.register(new DamageSystem());
     this.logicSystems.register(new EnergySystem());
 
-    // --- Render systems (read state, update visuals) ---
-    this.renderSystems.register(new TowerRenderer(this.entityLayer, GAME_MAP));
-    this.renderSystems.register(new EnemyRenderer(this.entityLayer, GAME_MAP));
+    this.renderSystems.register(new TowerRenderer(this.entityLayer, map));
+    this.renderSystems.register(new EnemyRenderer(this.entityLayer, map));
     this.renderSystems.register(new ProjectileRenderer(this.projectileLayer));
     this.renderSystems.register(new EffectRenderer(this.effectLayer));
   }
 
   update(dt: number) {
-    // Logic systems tick every frame (they check phase internally)
     this.logicSystems.update(dt);
-
-    // Renderers always tick (so sprites update positions even during pause)
     this.renderSystems.update(dt);
   }
 

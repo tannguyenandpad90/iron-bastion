@@ -1,22 +1,20 @@
 import { create } from 'zustand';
-import type { GameState, GamePhase, Tower, Enemy, Projectile, Skill, TowerType, SkillType } from '../types';
+import type {
+  GameState, GamePhase, Tower, Enemy, Projectile, Skill,
+  TowerType, SkillType, GameSpeed, MapId,
+} from '../types';
 import { INITIAL_GAME_STATE } from '../config/game';
 
 interface GameStore extends GameState {
-  // Entities
   towers: Tower[];
   enemies: Enemy[];
   projectiles: Projectile[];
-
-  // Skills
   skills: Skill[];
-  activeSkill: SkillType | null; // skill waiting for target click
-
-  // UI State
+  activeSkill: SkillType | null;
   selectedTowerType: TowerType | null;
   selectedTowerId: string | null;
 
-  // Actions - Game State
+  // Game State
   setPhase: (phase: GamePhase) => void;
   nextWave: () => void;
   addGold: (amount: number) => void;
@@ -24,8 +22,10 @@ interface GameStore extends GameState {
   loseLives: (amount: number) => void;
   addScore: (amount: number) => void;
   resetGame: () => void;
+  setGameSpeed: (speed: GameSpeed) => void;
+  setMapId: (mapId: MapId) => void;
 
-  // Actions - Entities
+  // Entities
   addTower: (tower: Tower) => void;
   removeTower: (id: string) => void;
   updateTower: (id: string, updates: Partial<Tower>) => void;
@@ -40,12 +40,12 @@ interface GameStore extends GameState {
   clearEnemies: () => void;
   clearProjectiles: () => void;
 
-  // Actions - UI
+  // UI
   selectTowerType: (type: TowerType | null) => void;
   selectTower: (id: string | null) => void;
   setActiveSkill: (skill: SkillType | null) => void;
 
-  // Actions - Energy
+  // Energy
   useEnergy: (amount: number) => boolean;
   regenEnergy: (amount: number) => void;
 }
@@ -58,26 +58,20 @@ const INITIAL_SKILLS: Skill[] = [
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...INITIAL_GAME_STATE,
-
   towers: [],
   enemies: [],
   projectiles: [],
   skills: INITIAL_SKILLS.map((s) => ({ ...s })),
   activeSkill: null,
-
   selectedTowerType: null,
   selectedTowerId: null,
 
-  // Game State
   setPhase: (phase) => set({ phase }),
   nextWave: () => set((s) => ({ wave: s.wave + 1 })),
   addGold: (amount) => set((s) => ({ gold: s.gold + amount })),
   spendGold: (amount) => {
     const { gold } = get();
-    if (gold >= amount) {
-      set({ gold: gold - amount });
-      return true;
-    }
+    if (gold >= amount) { set({ gold: gold - amount }); return true; }
     return false;
   },
   loseLives: (amount) => {
@@ -86,9 +80,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (newLives <= 0) set({ phase: 'gameover' });
   },
   addScore: (amount) => set((s) => ({ score: s.score + amount })),
+  setGameSpeed: (speed) => set({ gameSpeed: speed }),
+  setMapId: (mapId) => set({ mapId }),
   resetGame: () =>
     set({
       ...INITIAL_GAME_STATE,
+      mapId: get().mapId, // preserve map choice
       towers: [],
       enemies: [],
       projectiles: [],
@@ -98,20 +95,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       selectedTowerId: null,
     }),
 
-  // Entities
   addTower: (tower) => set((s) => ({ towers: [...s.towers, tower] })),
   removeTower: (id) => set((s) => ({ towers: s.towers.filter((t) => t.id !== id) })),
   updateTower: (id, updates) =>
-    set((s) => ({
-      towers: s.towers.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-    })),
+    set((s) => ({ towers: s.towers.map((t) => (t.id === id ? { ...t, ...updates } : t)) })),
   setTowers: (towers) => set({ towers }),
   addEnemy: (enemy) => set((s) => ({ enemies: [...s.enemies, enemy] })),
   removeEnemy: (id) => set((s) => ({ enemies: s.enemies.filter((e) => e.id !== id) })),
   updateEnemy: (id, updates) =>
-    set((s) => ({
-      enemies: s.enemies.map((e) => (e.id === id ? { ...e, ...updates } : e)),
-    })),
+    set((s) => ({ enemies: s.enemies.map((e) => (e.id === id ? { ...e, ...updates } : e)) })),
   setEnemies: (enemies) => set({ enemies }),
   addProjectile: (p) => set((s) => ({ projectiles: [...s.projectiles, p] })),
   removeProjectile: (id) =>
@@ -120,7 +112,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   clearEnemies: () => set({ enemies: [] }),
   clearProjectiles: () => set({ projectiles: [] }),
 
-  // UI
   selectTowerType: (type) =>
     set({ selectedTowerType: type, selectedTowerId: null, activeSkill: null }),
   selectTower: (id) =>
@@ -128,13 +119,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setActiveSkill: (skill) =>
     set({ activeSkill: skill, selectedTowerType: null, selectedTowerId: null }),
 
-  // Energy
   useEnergy: (amount) => {
     const { energy } = get();
-    if (energy >= amount) {
-      set({ energy: energy - amount });
-      return true;
-    }
+    if (energy >= amount) { set({ energy: energy - amount }); return true; }
     return false;
   },
   regenEnergy: (amount) =>

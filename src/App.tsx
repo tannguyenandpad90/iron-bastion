@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GameCanvas } from './ui/components/GameCanvas';
 import { HUD } from './ui/components/HUD';
 import { TowerShop } from './ui/panels/TowerShop';
@@ -6,10 +7,20 @@ import { SkillBar } from './ui/panels/SkillBar';
 import { WaveAnnounce } from './ui/panels/WaveAnnounce';
 import { PauseMenu } from './ui/panels/PauseMenu';
 import { GameOverScreen } from './ui/panels/GameOverScreen';
+import { MapSelector } from './ui/panels/MapSelector';
 import { useGameStore } from './stores/gameStore';
 
 export default function App() {
   const selectedTowerId = useGameStore((s) => s.selectedTowerId);
+  const [gameStarted, setGameStarted] = useState(false);
+
+  if (!gameStarted) {
+    return (
+      <div style={styles.root}>
+        <MapSelector onStart={() => setGameStarted(true)} />
+      </div>
+    );
+  }
 
   return (
     <div style={styles.root}>

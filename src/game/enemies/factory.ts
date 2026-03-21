@@ -25,14 +25,18 @@ export function createEnemy(
     stats.maxHp = Math.floor(stats.maxHp * 1.5);
   }
 
-  // Boss scaling: additional wave-based HP boost
+  // Flying trait: +20% speed, ignore terrain
+  if (traits.includes('flying') || enemyType === 'flyer') {
+    stats.speed *= 1.2;
+    if (!traits.includes('flying')) traits = [...traits, 'flying'];
+  }
+
   const isBoss = enemyType === 'boss';
   if (isBoss) {
     stats.maxHp = Math.floor(stats.maxHp * (1 + waveNumber * 0.2));
     stats.armor = Math.floor(stats.armor * 1.5);
   }
 
-  // Build boss phases
   let bossPhases: BossPhase[] | undefined;
   if (isBoss) {
     bossPhases = BOSS_PHASES.map((p) => ({
@@ -56,6 +60,7 @@ export function createEnemy(
     statusEffects: [],
     isBoss,
     bossPhases,
+    healCooldown: enemyType === 'healer' ? 0 : undefined,
     position: {
       x: spawnGridPos.col * cellSize + cellSize / 2,
       y: spawnGridPos.row * cellSize + cellSize / 2,

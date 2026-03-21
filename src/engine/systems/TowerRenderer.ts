@@ -6,6 +6,8 @@ const TOWER_COLORS: Record<TowerType, number> = {
   cannon: 0xff6b35,
   laser: 0x00ff88,
   aoe: 0xff3366,
+  sniper: 0xffdd00,
+  tesla: 0xaa44ff,
 };
 
 interface TowerSprite {
@@ -15,7 +17,8 @@ interface TowerSprite {
   rangeCircle: Graphics;
   synergyGlow: Graphics;
   laserBeam: Graphics;
-  level: number; // track for rebuild
+  teslaArc: Graphics;
+  level: number;
 }
 
 export class TowerRenderer implements GameSystem {
@@ -35,7 +38,6 @@ export class TowerRenderer implements GameSystem {
     const { towers, enemies, selectedTowerId } = useGameStore.getState();
     const activeTowerIds = new Set(towers.map((t) => t.id));
 
-    // Remove old
     for (const [id, sprite] of this.sprites) {
       if (!activeTowerIds.has(id)) {
         this.container.removeChild(sprite.container);
@@ -47,7 +49,6 @@ export class TowerRenderer implements GameSystem {
     for (const tower of towers) {
       let sprite = this.sprites.get(tower.id);
 
-      // Rebuild if level changed
       if (sprite && sprite.level !== tower.level) {
         this.container.removeChild(sprite.container);
         sprite.container.destroy({ children: true });
@@ -69,7 +70,7 @@ export class TowerRenderer implements GameSystem {
           const dy = target.position.y - tower.position.y;
           sprite.barrel.rotation = Math.atan2(dy, dx);
 
-          // Laser beam line
+          // Laser beam
           if (tower.towerType === 'laser' && tower.cooldown < 0.05) {
             sprite.laserBeam.clear();
             sprite.laserBeam.moveTo(0, 0);
@@ -79,17 +80,34 @@ export class TowerRenderer implements GameSystem {
           } else {
             sprite.laserBeam.visible = false;
           }
+
+          // Tesla arc
+          if (tower.towerType === 'tesla' && tower.cooldown < 0.1) {
+            sprite.teslaArc.clear();
+            // Zigzag line to target
+            const steps = 6;
+            sprite.teslaArc.moveTo(0, 0);
+            for (let i = 1; i <= steps; i++) {
+              const t = i / steps;
+              const px = dx * t + (Math.random() - 0.5) * 12;
+              const py = dy * t + (Math.random() - 0.5) * 12;
+              sprite.teslaArc.lineTo(px, py);
+            }
+            sprite.teslaArc.stroke({ color: 0xaa44ff, width: 2, alpha: 0.7 });
+            sprite.teslaArc.visible = true;
+          } else {
+            sprite.teslaArc.visible = false;
+          }
         } else {
           sprite.laserBeam.visible = false;
+          sprite.teslaArc.visible = false;
         }
       } else {
         sprite.laserBeam.visible = false;
+        sprite.teslaArc.visible = false;
       }
 
-      // Range circle
       sprite.rangeCircle.visible = tower.id === selectedTowerId;
-
-      // Synergy glow
       sprite.synergyGlow.visible = tower.synergyBuffs.length > 0;
     }
   }
@@ -97,7 +115,7 @@ export class TowerRenderer implements GameSystem {
   private createTowerSprite(tower: Tower): TowerSprite {
     const { cellSize } = this.map;
     const color = TOWER_COLORS[tower.towerType];
-    const size = cellSize * (0.5 + tower.level * 0.02); // slightly bigger per level
+    const size = cellSize * (0.5 + tower.level * 0.02);
 
     const spriteContainer = new Container();
     spriteContainer.x = tower.gridPos.col * cellSize + cellSize / 2;
@@ -112,22 +130,71 @@ export class TowerRenderer implements GameSystem {
     rangeCircle.visible = false;
     spriteContainer.addChild(rangeCircle);
 
-    // Synergy glow (larger subtle ring)
+    // Synergy glow
     const synergyGlow = new Graphics();
     synergyGlow.circle(0, 0, size / 2 + 6);
     synergyGlow.stroke({ color: 0xffd700, width: 2, alpha: 0.4 });
     synergyGlow.visible = false;
     spriteContainer.addChild(synergyGlow);
 
-    // Tower body
+    // Body — different shapes per type
     const body = new Graphics();
-    body.roundRect(-size / 2, -size / 2, size, size, 4);
-    body.fill({ color, alpha: 0.85 });
-    body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 });
+    const half = size / 2;
+
+    switch (tower.towerType) {
+      case 'cannon':
+        body.roundRect(-half, -half, size, size, 4);
+        body.fill({ color, alpha: 0.85 });
+        body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 });
+        break;
+      case 'laser':
+        body.circle(0, 0, half);
+        body.fill({ color, alpha: 0.85 });
+        body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 });
+        break;
+      case 'aoe':
+        // Octagon
+        for (let i = 0; i < 8; i++) {
+          const angle = (Math.PI * 2 * i) / 8 - Math.PI / 8;
+          const x = Math.cos(angle) * half;
+          const y = Math.sin(angle) * half;
+          if (i === 0) body.moveTo(x, y); else body.lineTo(x, y);
+        }
+        body.closePath();
+        body.fill({ color, alpha: 0.85 });
+        body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 });
+        break;
+      case 'sniper':
+        // Elongated diamond
+        body.moveTo(0, -half);
+        body.lineTo(half * 0.6, 0);
+        body.lineTo(0, half);
+        body.lineTo(-half * 0.6, 0);
+        body.closePath();
+        body.fill({ color, alpha: 0.85 });
+        body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 });
+        break;
+      case 'tesla':
+        // Star shape
+        for (let i = 0; i < 5; i++) {
+          const outerAngle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+          const innerAngle = outerAngle + Math.PI / 5;
+          const ox = Math.cos(outerAngle) * half;
+          const oy = Math.sin(outerAngle) * half;
+          const ix = Math.cos(innerAngle) * half * 0.45;
+          const iy = Math.sin(innerAngle) * half * 0.45;
+          if (i === 0) body.moveTo(ox, oy); else body.lineTo(ox, oy);
+          body.lineTo(ix, iy);
+        }
+        body.closePath();
+        body.fill({ color, alpha: 0.85 });
+        body.stroke({ color: 0xffffff, width: 2, alpha: 0.5 });
+        break;
+    }
 
     // Level dots
     if (tower.level > 1) {
-      const dotY = size / 2 - 4;
+      const dotY = half - 4;
       for (let i = 0; i < tower.level; i++) {
         const dotX = -((tower.level - 1) * 4) / 2 + i * 4;
         body.circle(dotX, dotY, 1.5);
@@ -138,24 +205,24 @@ export class TowerRenderer implements GameSystem {
 
     // Barrel
     const barrel = new Graphics();
-    const barrelLen = tower.towerType === 'laser' ? size * 0.6 : size * 0.45;
+    const barrelLen = tower.towerType === 'sniper' ? size * 0.75 : size * 0.45;
     barrel.rect(0, -2, barrelLen, 4);
     barrel.fill({ color: 0xffffff, alpha: 0.7 });
     spriteContainer.addChild(barrel);
 
-    // Laser beam line (drawn dynamically)
+    // Laser beam
     const laserBeam = new Graphics();
     laserBeam.visible = false;
     spriteContainer.addChild(laserBeam);
 
+    // Tesla arc
+    const teslaArc = new Graphics();
+    teslaArc.visible = false;
+    spriteContainer.addChild(teslaArc);
+
     return {
-      container: spriteContainer,
-      body,
-      barrel,
-      rangeCircle,
-      synergyGlow,
-      laserBeam,
-      level: tower.level,
+      container: spriteContainer, body, barrel, rangeCircle,
+      synergyGlow, laserBeam, teslaArc, level: tower.level,
     };
   }
 

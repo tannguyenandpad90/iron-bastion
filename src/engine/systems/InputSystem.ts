@@ -6,6 +6,7 @@ import { TOWER_CONFIG } from '../../config/towers';
 import { SKILL_CONFIG } from '../../config/skills';
 import { createTower } from '../../game/towers/factory';
 import { executeSkill } from '../../game/skills/execute';
+import { audio } from '../AudioManager';
 
 export class InputSystem implements GameSystem {
   readonly name = 'inputSystem';
@@ -119,7 +120,10 @@ export class InputSystem implements GameSystem {
     // Skill targeting
     if (store.activeSkill) {
       const worldPos = this.input.gridToWorld(event.gridPos);
-      executeSkill(store.activeSkill, worldPos);
+      const skillType = store.activeSkill;
+      executeSkill(skillType, worldPos);
+      const soundMap: Record<string, any> = { emp: 'skill_emp', airstrike: 'skill_airstrike', freeze: 'skill_freeze' };
+      audio.play(soundMap[skillType]);
       store.setActiveSkill(null);
       return;
     }
@@ -136,6 +140,7 @@ export class InputSystem implements GameSystem {
         if (store.spendGold(config.cost)) {
           const tower = createTower(store.selectedTowerType, event.gridPos, this.map.cellSize);
           store.addTower(tower);
+          audio.play('place_tower');
           return;
         }
       }
@@ -176,6 +181,12 @@ export class InputSystem implements GameSystem {
         break;
       case '3':
         store.selectTowerType('aoe');
+        break;
+      case '4':
+        store.selectTowerType('sniper');
+        break;
+      case '5':
+        store.selectTowerType('tesla');
         break;
       case 'q':
       case 'Q':

@@ -3,24 +3,32 @@ import { useGameStore } from '../../stores/gameStore';
 import { createProjectile } from '../../game/towers/factory';
 import { calcDamage } from '../../game/damage/calculator';
 import { evaluateSynergies } from '../../game/synergy/evaluate';
+import { audio } from '../AudioManager';
 
-const HIT_DISTANCE_SQ = 100; // 10px
+const HIT_DISTANCE_SQ = 100;
+const CHAIN_RANGE_SQ = (3 * 64) * (3 * 64); // 3 cells
 
 export class CombatSystem implements GameSystem {
   readonly name = 'combatSystem';
 
   private synergyTimer = 0;
-  private readonly SYNERGY_INTERVAL = 0.5; // recalc every 0.5s
+  private readonly SYNERGY_INTERVAL = 0.5;
+  private shootThrottle = new Map<string, number>(); // tower id → audio cooldown
 
   update(dt: number) {
     const store = useGameStore.getState();
     if (store.phase !== 'wave') return;
 
-    // Periodically recalculate synergies
     this.synergyTimer += dt;
     if (this.synergyTimer >= this.SYNERGY_INTERVAL) {
       this.synergyTimer = 0;
       this.updateSynergies(store.towers);
+    }
+
+    // Tick audio throttle
+    for (const [id, t] of this.shootThrottle) {
+      if (t <= 0) this.shootThrottle.delete(id);
+      else this.shootThrottle.set(id, t - dt);
     }
 
     this.processTowerFiring(store.towers, store.enemies, dt);
@@ -30,13 +38,10 @@ export class CombatSystem implements GameSystem {
   private updateSynergies(towers: Tower[]) {
     const bonuses = evaluateSynergies(towers);
     let changed = false;
-
     const updatedTowers = towers.map((tower) => {
       const towerBonuses = bonuses
         .filter((b) => b.towerId === tower.id)
         .map((b) => ({ bonusType: b.bonusType, value: b.value, pairedWith: b.pairedWith }));
-
-      // Only update if bonuses changed
       const oldStr = JSON.stringify(tower.synergyBuffs);
       const newStr = JSON.stringify(towerBonuses);
       if (oldStr !== newStr) {
@@ -45,10 +50,7 @@ export class CombatSystem implements GameSystem {
       }
       return tower;
     });
-
-    if (changed) {
-      useGameStore.setState({ towers: updatedTowers });
-    }
+    if (changed) useGameStore.setState({ towers: updatedTowers });
   }
 
   private processTowerFiring(towers: Tower[], enemies: Enemy[], dt: number) {
@@ -56,18 +58,13 @@ export class CombatSystem implements GameSystem {
 
     let towersChanged = false;
     const newProjectiles: Projectile[] = [];
-
-    // For laser beam: accumulate direct damage to enemies
     const laserDamageMap = new Map<string, { damage: number; statusEffects: ActiveStatusEffect[] }>();
 
     const updatedTowers = towers.map((tower) => {
-      // Tick cooldown
       if (tower.cooldown > 0) {
         towersChanged = true;
         const newCooldown = Math.max(0, tower.cooldown - dt);
-        if (newCooldown > 0) {
-          return { ...tower, cooldown: newCooldown };
-        }
+        if (newCooldown > 0) return { ...tower, cooldown: newCooldown };
         tower = { ...tower, cooldown: 0 };
       }
 
@@ -79,15 +76,21 @@ export class CombatSystem implements GameSystem {
       towersChanged = true;
       const cooldownTime = 1 / tower.stats.fireRate;
 
+      // Play sound (throttled to avoid spam)
+      if (!this.shootThrottle.has(tower.id)) {
+        const soundMap: Record<string, any> = {
+          cannon: 'shoot_cannon', laser: 'shoot_laser', aoe: 'shoot_aoe',
+          sniper: 'shoot_sniper', tesla: 'shoot_tesla',
+        };
+        audio.play(soundMap[tower.towerType] ?? 'shoot_cannon');
+        this.shootThrottle.set(tower.id, tower.towerType === 'laser' ? 0.3 : 0.15);
+      }
+
       if (tower.towerType === 'laser') {
-        // Laser: instant beam damage, no projectile
         const proj = createProjectile(tower, target);
         const damage = calcDamage(proj.damage, target);
-
         const existing = laserDamageMap.get(target.id) ?? { damage: 0, statusEffects: [] };
         existing.damage += damage;
-
-        // Apply status effect
         if (proj.statusOnHit) {
           existing.statusEffects.push({
             type: proj.statusOnHit.type,
@@ -96,10 +99,8 @@ export class CombatSystem implements GameSystem {
             intensity: proj.statusOnHit.intensity,
           });
         }
-
         laserDamageMap.set(target.id, existing);
       } else {
-        // Cannon/AoE: spawn projectile
         const proj = createProjectile(tower, target);
         newProjectiles.push(proj);
       }
@@ -107,23 +108,17 @@ export class CombatSystem implements GameSystem {
       return { ...tower, cooldown: cooldownTime };
     });
 
-    if (towersChanged) {
-      useGameStore.setState({ towers: updatedTowers });
-    }
+    if (towersChanged) useGameStore.setState({ towers: updatedTowers });
 
-    // Add new projectiles
     if (newProjectiles.length > 0) {
       const store = useGameStore.getState();
       store.setProjectiles([...store.projectiles, ...newProjectiles]);
     }
 
-    // Apply laser damage
-    if (laserDamageMap.size > 0) {
-      this.applyLaserDamage(laserDamageMap);
-    }
+    if (laserDamageMap.size > 0) this.applyDirectDamage(laserDamageMap);
   }
 
-  private applyLaserDamage(
+  private applyDirectDamage(
     damageMap: Map<string, { damage: number; statusEffects: ActiveStatusEffect[] }>,
   ) {
     const store = useGameStore.getState();
@@ -134,26 +129,14 @@ export class CombatSystem implements GameSystem {
       .map((enemy) => {
         const entry = damageMap.get(enemy.id);
         if (!entry) return enemy;
-
         const newHp = enemy.hp - entry.damage;
         if (newHp <= 0) {
           goldEarned += enemy.stats.reward;
           scoreEarned += enemy.stats.reward * 10;
+          audio.play(enemy.isBoss ? 'boss_kill' : 'kill');
           return null;
         }
-
-        // Merge status effects (don't stack same type, refresh duration)
-        const mergedEffects = [...enemy.statusEffects];
-        for (const newEffect of entry.statusEffects) {
-          const existing = mergedEffects.find((e) => e.type === newEffect.type);
-          if (existing) {
-            existing.remaining = Math.max(existing.remaining, newEffect.remaining);
-            existing.intensity = Math.max(existing.intensity, newEffect.intensity);
-          } else {
-            mergedEffects.push(newEffect);
-          }
-        }
-
+        const mergedEffects = this.mergeStatusEffects(enemy.statusEffects, entry.statusEffects);
         return { ...enemy, hp: newHp, statusEffects: mergedEffects };
       })
       .filter((e): e is Enemy => e !== null);
@@ -174,33 +157,17 @@ export class CombatSystem implements GameSystem {
     for (const proj of store.projectiles) {
       const target = store.enemies.find((e) => e.id === proj.targetId);
 
-      if (!target || killedEnemyIds.has(target.id)) {
-        continue;
-      }
+      if (!target || killedEnemyIds.has(target.id)) continue;
 
       const dx = target.position.x - proj.position.x;
       const dy = target.position.y - proj.position.y;
       const distSq = dx * dx + dy * dy;
 
       if (distSq < HIT_DISTANCE_SQ) {
-        // Hit primary target
+        // Hit primary
         const damage = calcDamage(proj.damage, target);
-        const entry = enemyDamageMap.get(target.id) ?? { damage: 0, statusEffects: [] };
-        entry.damage += damage;
-
-        // Status effect on hit
-        if (proj.statusOnHit) {
-          entry.statusEffects.push({
-            type: proj.statusOnHit.type,
-            duration: proj.statusOnHit.duration,
-            remaining: proj.statusOnHit.duration,
-            intensity: proj.statusOnHit.intensity,
-          });
-        }
-
-        enemyDamageMap.set(target.id, entry);
-
-        if (target.hp - entry.damage <= 0) {
+        this.addDamageEntry(enemyDamageMap, target.id, damage, proj.statusOnHit);
+        if (target.hp - (enemyDamageMap.get(target.id)?.damage ?? 0) <= 0) {
           killedEnemyIds.add(target.id);
         }
 
@@ -213,31 +180,51 @@ export class CombatSystem implements GameSystem {
             const ady = other.position.y - target.position.y;
             if (adx * adx + ady * ady <= aoeRadiusSq) {
               const aoeDmg = calcDamage(Math.floor(proj.damage * 0.5), other);
-              const aoeEntry = enemyDamageMap.get(other.id) ?? { damage: 0, statusEffects: [] };
-              aoeEntry.damage += aoeDmg;
-
-              // AoE also applies status
-              if (proj.statusOnHit) {
-                aoeEntry.statusEffects.push({
-                  type: proj.statusOnHit.type,
-                  duration: Math.floor(proj.statusOnHit.duration * 0.5),
-                  remaining: Math.floor(proj.statusOnHit.duration * 0.5),
-                  intensity: proj.statusOnHit.intensity * 0.5,
-                });
-              }
-
-              enemyDamageMap.set(other.id, aoeEntry);
-              if (other.hp - aoeEntry.damage <= 0) {
+              this.addDamageEntry(enemyDamageMap, other.id, aoeDmg, proj.statusOnHit, 0.5);
+              if (other.hp - (enemyDamageMap.get(other.id)?.damage ?? 0) <= 0) {
                 killedEnemyIds.add(other.id);
               }
             }
           }
         }
+
+        // Tesla chain lightning
+        if (proj.chainCount && proj.chainCount > 0) {
+          let lastPos = target.position;
+          let chainedIds = new Set([target.id]);
+          let remainingChains = proj.chainCount;
+
+          for (let c = 0; c < remainingChains; c++) {
+            let closest: Enemy | null = null;
+            let closestDist = CHAIN_RANGE_SQ;
+
+            for (const other of store.enemies) {
+              if (chainedIds.has(other.id) || killedEnemyIds.has(other.id)) continue;
+              const cdx = other.position.x - lastPos.x;
+              const cdy = other.position.y - lastPos.y;
+              const cd = cdx * cdx + cdy * cdy;
+              if (cd < closestDist) {
+                closestDist = cd;
+                closest = other;
+              }
+            }
+
+            if (!closest) break;
+            chainedIds.add(closest.id);
+
+            const chainDmg = calcDamage(Math.floor(proj.damage * 0.6), closest);
+            this.addDamageEntry(enemyDamageMap, closest.id, chainDmg, proj.statusOnHit, 0.3);
+            if (closest.hp - (enemyDamageMap.get(closest.id)?.damage ?? 0) <= 0) {
+              killedEnemyIds.add(closest.id);
+            }
+            lastPos = closest.position;
+          }
+        }
+
+        audio.play('hit');
       } else {
-        // Move projectile
         const dist = Math.sqrt(distSq);
         const speed = proj.speed * dt;
-
         survivingProjectiles.push({
           ...proj,
           position: {
@@ -256,26 +243,14 @@ export class CombatSystem implements GameSystem {
       .map((enemy) => {
         const entry = enemyDamageMap.get(enemy.id);
         if (!entry) return enemy;
-
         const newHp = enemy.hp - entry.damage;
         if (newHp <= 0) {
           goldEarned += enemy.stats.reward;
-          scoreEarned += enemy.stats.reward * 10;
+          scoreEarned += enemy.stats.reward * (enemy.isBoss ? 50 : 10);
+          audio.play(enemy.isBoss ? 'boss_kill' : 'kill');
           return null;
         }
-
-        // Merge status effects
-        const mergedEffects = [...enemy.statusEffects];
-        for (const newEffect of entry.statusEffects) {
-          const existing = mergedEffects.find((e) => e.type === newEffect.type);
-          if (existing) {
-            existing.remaining = Math.max(existing.remaining, newEffect.remaining);
-            existing.intensity = Math.max(existing.intensity, newEffect.intensity);
-          } else {
-            mergedEffects.push(newEffect);
-          }
-        }
-
+        const mergedEffects = this.mergeStatusEffects(enemy.statusEffects, entry.statusEffects);
         return { ...enemy, hp: newHp, statusEffects: mergedEffects };
       })
       .filter((e): e is Enemy => e !== null);
@@ -284,5 +259,42 @@ export class CombatSystem implements GameSystem {
     store.setEnemies(updatedEnemies);
     if (goldEarned > 0) store.addGold(goldEarned);
     if (scoreEarned > 0) store.addScore(scoreEarned);
+  }
+
+  private addDamageEntry(
+    map: Map<string, { damage: number; statusEffects: ActiveStatusEffect[] }>,
+    enemyId: string,
+    damage: number,
+    statusOnHit?: { type: any; duration: number; intensity: number },
+    statusScale = 1,
+  ) {
+    const entry = map.get(enemyId) ?? { damage: 0, statusEffects: [] };
+    entry.damage += damage;
+    if (statusOnHit && statusOnHit.type !== 'chain') {
+      entry.statusEffects.push({
+        type: statusOnHit.type,
+        duration: statusOnHit.duration * statusScale,
+        remaining: statusOnHit.duration * statusScale,
+        intensity: statusOnHit.intensity * statusScale,
+      });
+    }
+    map.set(enemyId, entry);
+  }
+
+  private mergeStatusEffects(
+    existing: ActiveStatusEffect[],
+    newEffects: ActiveStatusEffect[],
+  ): ActiveStatusEffect[] {
+    const merged = [...existing];
+    for (const ne of newEffects) {
+      const ex = merged.find((e) => e.type === ne.type);
+      if (ex) {
+        ex.remaining = Math.max(ex.remaining, ne.remaining);
+        ex.intensity = Math.max(ex.intensity, ne.intensity);
+      } else {
+        merged.push(ne);
+      }
+    }
+    return merged;
   }
 }

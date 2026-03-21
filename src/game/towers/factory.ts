@@ -11,6 +11,9 @@ export function createTower(
 ): Tower {
   const stats = { ...TOWER_CONFIG[towerType] };
 
+  // Sniper defaults to "strongest" targeting
+  const defaultMode: TargetingMode = towerType === 'sniper' ? 'strongest' : 'first';
+
   return {
     id: `tower_${nextTowerId++}`,
     type: 'tower',
@@ -20,7 +23,7 @@ export function createTower(
     target: null,
     cooldown: 0,
     gridPos,
-    targetingMode: 'first' as TargetingMode,
+    targetingMode: defaultMode,
     synergyBuffs: [],
     position: {
       x: gridPos.col * cellSize + cellSize / 2,
@@ -52,7 +55,6 @@ export function upgradeTower(tower: Tower): Tower {
       damage: Math.floor(tower.stats.damage * m),
       range: tower.stats.range * 1.05,
       fireRate: tower.stats.fireRate * 1.08,
-      // Preserve statusOnHit but scale intensity with level
       statusOnHit: baseStats.statusOnHit
         ? {
             ...baseStats.statusOnHit,
@@ -75,7 +77,6 @@ export function getSellValue(tower: Tower): number {
 }
 
 export function createProjectile(tower: Tower, target: Enemy): Projectile {
-  // Calculate effective damage with synergy bonuses
   let damage = tower.stats.damage;
   let critApplied = false;
 
@@ -85,28 +86,37 @@ export function createProjectile(tower: Tower, target: Enemy): Projectile {
     }
     if (buff.bonusType === 'critChance') {
       if (Math.random() < buff.value) {
-        damage = Math.floor(damage * 2);
+        damage = Math.floor(damage * 2.5);
         critApplied = true;
       }
     }
+    if (buff.bonusType === 'piercing') {
+      // Piercing ignores portion of armor — applied via higher base damage
+      damage = Math.floor(damage * (1 + buff.value));
+    }
   }
 
-  // AoE radius boosted by shrapnel synergy
   let aoeRadius: number | undefined;
   if (tower.towerType === 'aoe') {
     let splashMultiplier = 1;
     for (const buff of tower.synergyBuffs) {
-      if (buff.bonusType === 'shrapnel') {
-        splashMultiplier += buff.value;
-      }
+      if (buff.bonusType === 'shrapnel') splashMultiplier += buff.value;
     }
     aoeRadius = tower.stats.range * 0.5 * 64 * splashMultiplier;
   }
 
-  // Status effect on hit
   let statusOnHit = tower.stats.statusOnHit ? { ...tower.stats.statusOnHit } : undefined;
 
-  // Burn DOT synergy bonus
+  // Tesla chain count
+  let chainCount: number | undefined;
+  if (tower.towerType === 'tesla') {
+    chainCount = 3;
+    for (const buff of tower.synergyBuffs) {
+      if (buff.bonusType === 'chainBoost') chainCount += buff.value;
+    }
+  }
+
+  // Burn synergy
   for (const buff of tower.synergyBuffs) {
     if (buff.bonusType === 'burnDot') {
       if (!statusOnHit) {
@@ -129,6 +139,7 @@ export function createProjectile(tower: Tower, target: Enemy): Projectile {
     aoeRadius,
     statusOnHit,
     critApplied,
+    chainCount,
   };
 }
 
