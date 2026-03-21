@@ -9,6 +9,7 @@ export class GameEngine {
   sceneManager: SceneManager;
   private running = false;
   private lastTime = 0;
+  private destroyed = false;
 
   constructor() {
     this.app = new Application();
@@ -25,15 +26,17 @@ export class GameEngine {
       height,
       backgroundColor: 0x1a1a2e,
       antialias: true,
-      resolution: window.devicePixelRatio || 1,
-      autoDensity: true,
     });
 
-    // PixiJS v8 creates its own canvas — append it to our container
-    parentElement.appendChild(this.app.canvas);
+    if (this.destroyed) return;
+
+    // Append PixiJS canvas to container
+    const canvas = this.app.canvas as HTMLCanvasElement;
+    canvas.style.display = 'block';
+    parentElement.appendChild(canvas);
 
     // Prevent right-click context menu
-    this.app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     this.app.stage.addChild(this.stage);
 
@@ -44,6 +47,7 @@ export class GameEngine {
   }
 
   start() {
+    if (this.destroyed) return;
     this.running = true;
     this.lastTime = performance.now();
     this.app.ticker.add(this.tick);
@@ -75,8 +79,13 @@ export class GameEngine {
   };
 
   destroy() {
+    this.destroyed = true;
     this.stop();
     this.sceneManager.destroy();
-    this.app.destroy({ removeView: true }, { children: true });
+    try {
+      this.app.destroy({ removeView: true }, { children: true });
+    } catch {
+      // Ignore errors during cleanup
+    }
   }
 }
