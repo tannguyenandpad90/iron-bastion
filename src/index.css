@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -5,8 +7,9 @@
 }
 
 body {
-  background: #0a0a1a;
+  background: #0B0F1A;
   overflow: hidden;
+  font-family: 'Exo 2', monospace, sans-serif;
 }
 
 #root {
@@ -17,4 +20,32 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.3); }
+}
+
+@keyframes neon-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.6; }
+  94% { opacity: 1; }
+  96% { opacity: 0.8; }
+  97% { opacity: 1; }
+}
+
+button {
+  font-family: 'Exo 2', monospace, sans-serif;
+  transition: transform 0.1s, filter 0.15s;
+}
+
+button:hover:not(:disabled) {
+  transform: scale(1.03);
+  filter: brightness(1.2);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }

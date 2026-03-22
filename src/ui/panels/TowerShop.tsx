@@ -2,6 +2,10 @@ import { useGameStore } from '../../stores/gameStore';
 import { TOWER_CONFIG, TOWER_DESCRIPTIONS } from '../../config/towers';
 import type { TowerType } from '../../types';
 
+const NEON: Record<TowerType, string> = {
+  cannon: '#00F5A0', laser: '#00E5FF', aoe: '#FF3D6E', sniper: '#FFD166', tesla: '#9B5CFF',
+};
+
 export function TowerShop() {
   const { gold, selectedTowerType, selectTowerType, phase } = useGameStore();
 
@@ -10,54 +14,52 @@ export function TowerShop() {
       <div style={styles.title}>TOWERS</div>
       <div style={styles.list}>
         {(Object.keys(TOWER_CONFIG) as TowerType[]).map((type) => {
-          const config = TOWER_CONFIG[type];
+          const cfg = TOWER_CONFIG[type];
           const info = TOWER_DESCRIPTIONS[type];
-          const canAfford = gold >= config.cost;
-          const isSelected = selectedTowerType === type;
+          const neon = NEON[type];
+          const afford = gold >= cfg.cost;
+          const sel = selectedTowerType === type;
 
           return (
             <button
               key={type}
-              onClick={() => selectTowerType(isSelected ? null : type)}
-              disabled={!canAfford}
+              onClick={() => selectTowerType(sel ? null : type)}
+              disabled={!afford}
               style={{
-                ...styles.towerBtn,
-                borderColor: isSelected ? info.color : canAfford ? '#333' : '#222',
-                opacity: canAfford ? 1 : 0.4,
-                background: isSelected ? `${info.color}15` : '#111',
+                ...styles.card,
+                borderColor: sel ? neon : afford ? '#1E2D42' : '#111825',
+                opacity: afford ? 1 : 0.35,
+                background: sel ? `${neon}10` : '#0D1220',
+                boxShadow: sel ? `0 0 12px ${neon}30, inset 0 0 8px ${neon}10` : 'none',
               }}
             >
-              <div style={{ ...styles.colorDot, background: info.color }} />
-              <div style={styles.info}>
-                <div style={styles.nameRow}>
-                  <span style={styles.name}>{info.name}</span>
-                  <span style={styles.key}>[{info.key}]</span>
-                </div>
-                <span style={styles.desc}>{info.desc}</span>
-                <div style={styles.statsRow}>
-                  <span style={styles.miniStat}>D:{config.damage}</span>
-                  <span style={styles.miniStat}>R:{config.range}</span>
-                  {config.statusOnHit && (
-                    <span style={{ ...styles.miniStat, color: '#7b68ee' }}>
-                      {config.statusOnHit.type}
-                    </span>
-                  )}
-                </div>
+              <div style={styles.cardTop}>
+                <div style={{ ...styles.dot, background: neon, boxShadow: `0 0 6px ${neon}` }} />
+                <span style={{ ...styles.name, color: sel ? neon : '#8A9ABB' }}>{info.name}</span>
+                <span style={styles.key}>[{info.key}]</span>
               </div>
-              <span style={styles.cost}>{config.cost}g</span>
+              <div style={styles.desc}>{info.desc}</div>
+              <div style={styles.statsRow}>
+                <span style={styles.miniStat}>DMG:{cfg.damage}</span>
+                <span style={styles.miniStat}>RNG:{cfg.range}</span>
+                {cfg.statusOnHit && (
+                  <span style={{ ...styles.miniStat, color: '#9B5CFF' }}>{cfg.statusOnHit.type}</span>
+                )}
+              </div>
+              <div style={{ ...styles.cost, color: afford ? '#FFD166' : '#4A5A7A' }}>
+                {cfg.cost}g
+              </div>
             </button>
           );
         })}
       </div>
 
       <div style={styles.divider} />
-      <div style={styles.helpSection}>
+      <div style={styles.help}>
         <div style={styles.helpTitle}>CONTROLS</div>
-        <div style={styles.helpLine}>[1-5] Select tower</div>
-        <div style={styles.helpLine}>[Q/W/E] Use skill</div>
-        <div style={styles.helpLine}>[Click] Place / target</div>
-        <div style={styles.helpLine}>[Right] Cancel</div>
-        <div style={styles.helpLine}>[Space] {phase === 'wave' ? 'Pause' : 'Start wave'}</div>
+        <div style={styles.helpLine}>[1-5] Tower  [Q/W/E] Skill</div>
+        <div style={styles.helpLine}>[Click] Place  [Right] Cancel</div>
+        <div style={styles.helpLine}>[Space] {phase === 'wave' ? 'Pause' : 'Start'}</div>
       </div>
     </div>
   );
@@ -65,48 +67,33 @@ export function TowerShop() {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-    padding: 10,
-    background: '#0f0f23',
-    borderLeft: '2px solid #333',
-    width: 210,
-    fontFamily: 'monospace',
-    userSelect: 'none',
+    display: 'flex', flexDirection: 'column', gap: 4, padding: 10,
+    background: '#0B0F1A', borderLeft: '1px solid #1E2D42',
+    width: 200, fontFamily: "'Exo 2', monospace", userSelect: 'none',
     overflowY: 'auto',
   },
   title: {
-    color: '#e94560',
-    fontSize: 11,
-    letterSpacing: 3,
-    textAlign: 'center',
-    paddingBottom: 6,
-    borderBottom: '1px solid #333',
+    color: '#FF3D6E', fontSize: 11, letterSpacing: 4, textAlign: 'center',
+    paddingBottom: 6, borderBottom: '1px solid #1E2D42', fontWeight: 700,
+    textShadow: '0 0 8px #FF3D6E44',
   },
   list: { display: 'flex', flexDirection: 'column', gap: 4 },
-  towerBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '6px 8px',
-    border: '1px solid #333',
-    borderRadius: 4,
-    cursor: 'pointer',
-    color: '#eee',
-    textAlign: 'left',
+  card: {
+    display: 'flex', flexDirection: 'column', gap: 3,
+    padding: '7px 9px', border: '1px solid #1E2D42', borderRadius: 4,
+    cursor: 'pointer', color: '#8A9ABB', textAlign: 'left',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
   },
-  colorDot: { width: 10, height: 10, borderRadius: '50%', flexShrink: 0 },
-  info: { display: 'flex', flexDirection: 'column', flex: 1, gap: 1 },
-  nameRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  name: { fontSize: 12, fontWeight: 'bold' },
-  key: { fontSize: 8, color: '#555' },
-  desc: { fontSize: 9, color: '#888' },
-  statsRow: { display: 'flex', gap: 5 },
-  miniStat: { fontSize: 8, color: '#666' },
-  cost: { fontSize: 13, color: '#ffd700', fontWeight: 'bold', flexShrink: 0 },
-  divider: { height: 1, background: '#333', margin: '2px 0' },
-  helpSection: { display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2 },
-  helpTitle: { fontSize: 9, color: '#555', letterSpacing: 2 },
-  helpLine: { fontSize: 9, color: '#444' },
+  cardTop: { display: 'flex', alignItems: 'center', gap: 6 },
+  dot: { width: 8, height: 8, borderRadius: '50%', flexShrink: 0 },
+  name: { fontSize: 12, fontWeight: 700, flex: 1 },
+  key: { fontSize: 8, color: '#3A4A6A' },
+  desc: { fontSize: 9, color: '#4A5A7A' },
+  statsRow: { display: 'flex', gap: 6 },
+  miniStat: { fontSize: 8, color: '#3A4A6A' },
+  cost: { fontSize: 13, fontWeight: 800, textAlign: 'right' },
+  divider: { height: 1, background: '#1E2D42', margin: '4px 0' },
+  help: { display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 2 },
+  helpTitle: { fontSize: 8, color: '#2A3A55', letterSpacing: 3, fontWeight: 600 },
+  helpLine: { fontSize: 8, color: '#2A3A55' },
 };

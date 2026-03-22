@@ -14,9 +14,7 @@ export default function App() {
   const selectedTowerId = useGameStore((s) => s.selectedTowerId);
   const [gameStarted, setGameStarted] = useState(false);
 
-  const handleQuit = useCallback(() => {
-    setGameStarted(false);
-  }, []);
+  const handleQuit = useCallback(() => setGameStarted(false), []);
 
   if (!gameStarted) {
     return (
@@ -50,7 +48,8 @@ export default function App() {
 const styles: Record<string, React.CSSProperties> = {
   root: {
     display: 'flex', flexDirection: 'column', height: '100vh',
-    background: '#0a0a1a', overflow: 'hidden', userSelect: 'none',
+    background: '#0B0F1A', overflow: 'hidden', userSelect: 'none',
+    fontFamily: "'Exo 2', monospace",
   },
   main: { display: 'flex', flex: 1, minHeight: 0 },
   gameArea: {

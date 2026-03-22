@@ -20,47 +20,60 @@ export function HUD() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.left}>
-        <Stat label="LIVES" value={lives} color={lives <= 5 ? '#e94560' : '#00d4ff'} />
-        <Stat label="GOLD" value={gold} color="#ffd700" />
-        <Stat label="ENERGY" value={`${Math.floor(energy)}/${maxEnergy}`} color="#7b68ee" />
+      <div style={styles.section}>
+        <Stat label="LIVES" value={lives} color={lives <= 5 ? '#FF3D6E' : '#00F5A0'} />
+        <Stat label="GOLD" value={gold} color="#FFD166" />
+        <Stat label="ENERGY" value={`${Math.floor(energy)}/${maxEnergy}`} color="#9B5CFF" />
       </div>
+
       <div style={styles.center}>
-        <span style={styles.phase}>
-          {phase === 'wave' ? 'DEFENDING' : phase.toUpperCase()}
-        </span>
+        <div style={styles.phaseRow}>
+          <span style={styles.phase}>
+            {phase === 'wave' ? 'DEFENDING' : phase.toUpperCase()}
+          </span>
+        </div>
         <span style={styles.mapName}>{mapName}</span>
         <span style={styles.stageText}>
-          Map {mapIndex + 1}/{CAMPAIGN.length} — Stage {stage}/{stagesPerMap}
+          MAP {mapIndex + 1}/{CAMPAIGN.length} — STAGE {stage}/{stagesPerMap}
         </span>
-        <div style={styles.controlRow}>
+        <div style={styles.controls}>
           {SPEEDS.map((s) => (
             <button
               key={s}
               onClick={() => setGameSpeed(s)}
               style={{
-                ...styles.speedBtn,
-                background: gameSpeed === s ? '#e94560' : '#222',
-                color: gameSpeed === s ? '#fff' : '#666',
+                ...styles.ctrlBtn,
+                background: gameSpeed === s ? '#FF3D6E' : 'rgba(26,35,51,0.8)',
+                color: gameSpeed === s ? '#fff' : '#4A5A7A',
+                borderColor: gameSpeed === s ? '#FF3D6E' : '#1E2D42',
               }}
             >
               {s}x
             </button>
           ))}
-          <button onClick={handlePause} style={{ ...styles.speedBtn, marginLeft: 4 }}>
+          <button onClick={handlePause} style={{
+            ...styles.ctrlBtn, marginLeft: 6,
+            borderColor: phase === 'paused' ? '#00F5A0' : '#1E2D42',
+            color: phase === 'paused' ? '#00F5A0' : '#4A5A7A',
+          }}>
             {phase === 'paused' ? '>' : '||'}
           </button>
           <button
             onClick={() => audio.toggleMute()}
-            style={{ ...styles.speedBtn, color: audio.muted ? '#e94560' : '#666' }}
+            style={{
+              ...styles.ctrlBtn,
+              borderColor: audio.muted ? '#FF3D6E' : '#1E2D42',
+              color: audio.muted ? '#FF3D6E' : '#4A5A7A',
+            }}
           >
             {audio.muted ? 'X' : 'S'}
           </button>
         </div>
       </div>
-      <div style={styles.right}>
-        <Stat label="SCORE" value={score} color="#00d4ff" />
-        <Stat label="WAVE" value={wave} color="#888" />
+
+      <div style={styles.section}>
+        <Stat label="SCORE" value={score} color="#00E5FF" />
+        <Stat label="WAVE" value={wave} color="#4A5A7A" />
       </div>
     </div>
   );
@@ -68,34 +81,39 @@ export function HUD() {
 
 function Stat({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
-    <span style={styles.stat}>
-      <span style={styles.label}>{label}</span>
-      <span style={{ ...styles.value, color }}>{value}</span>
-    </span>
+    <div style={styles.stat}>
+      <span style={styles.statLabel}>{label}</span>
+      <span style={{ ...styles.statValue, color, textShadow: `0 0 8px ${color}44` }}>{value}</span>
+    </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '5px 16px',
-    background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
-    borderBottom: '2px solid #e94560', fontFamily: 'monospace',
-    color: '#eee', minHeight: 42, userSelect: 'none',
+    padding: '6px 20px',
+    background: 'linear-gradient(180deg, #0D1220 0%, #0B0F1A 100%)',
+    borderBottom: '1px solid #1E2D42',
+    fontFamily: "'Exo 2', monospace",
+    color: '#8A9ABB', minHeight: 44, userSelect: 'none',
   },
-  left: { display: 'flex', gap: 18 },
+  section: { display: 'flex', gap: 22, alignItems: 'center' },
   center: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 },
-  right: { display: 'flex', gap: 18 },
-  stat: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  label: { fontSize: 8, color: '#555', letterSpacing: 2 },
-  value: { fontSize: 15, fontWeight: 'bold' },
-  phase: { fontSize: 10, color: '#e94560', letterSpacing: 3, fontWeight: 'bold' },
-  mapName: { fontSize: 10, color: '#ffd700', letterSpacing: 1 },
-  stageText: { fontSize: 9, color: '#888' },
-  controlRow: { display: 'flex', gap: 3, marginTop: 1 },
-  speedBtn: {
-    padding: '1px 5px', border: '1px solid #333', borderRadius: 3,
-    cursor: 'pointer', fontFamily: 'monospace', fontSize: 9, fontWeight: 'bold',
-    background: '#222', color: '#666',
+  phaseRow: { display: 'flex', alignItems: 'center', gap: 6 },
+  phase: {
+    fontSize: 11, color: '#FF3D6E', letterSpacing: 4, fontWeight: 700,
+    textShadow: '0 0 10px #FF3D6E44',
   },
+  mapName: { fontSize: 10, color: '#FFD166', letterSpacing: 2, fontWeight: 600 },
+  stageText: { fontSize: 9, color: '#4A5A7A', letterSpacing: 1 },
+  controls: { display: 'flex', gap: 3, marginTop: 2 },
+  ctrlBtn: {
+    padding: '2px 7px', border: '1px solid #1E2D42', borderRadius: 3,
+    cursor: 'pointer', fontSize: 9, fontWeight: 700,
+    background: 'rgba(26,35,51,0.8)', color: '#4A5A7A',
+    fontFamily: "'Exo 2', monospace",
+  },
+  stat: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 },
+  statLabel: { fontSize: 8, color: '#3A4A6A', letterSpacing: 2, fontWeight: 600 },
+  statValue: { fontSize: 16, fontWeight: 800 },
 };
