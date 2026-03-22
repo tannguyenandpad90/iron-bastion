@@ -125,6 +125,14 @@ export class TowerRenderer implements GameSystem {
 
       sprite.rangeCircle.visible = tower.id === selectedTowerId;
       sprite.synergyGlow.visible = tower.synergyBuffs.length > 0;
+
+      // Idle animation — subtle pulse
+      if (!tower.target) {
+        const pulse = 1 + Math.sin(Date.now() * 0.003 + tower.gridPos.col * 2) * 0.03;
+        sprite.body.scale.set(pulse);
+      } else {
+        sprite.body.scale.set(1);
+      }
     }
   }
 

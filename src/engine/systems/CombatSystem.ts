@@ -4,6 +4,7 @@ import { createProjectile } from '../../game/towers/factory';
 import { calcDamage } from '../../game/damage/calculator';
 import { evaluateSynergies } from '../../game/synergy/evaluate';
 import { audio } from '../AudioManager';
+import { vfxBridge } from '../VfxBridge';
 
 const HIT_DISTANCE_SQ = 100;
 const CHAIN_RANGE_SQ = (3 * 64) * (3 * 64); // 3 cells
@@ -134,8 +135,10 @@ export class CombatSystem implements GameSystem {
           goldEarned += enemy.stats.reward;
           scoreEarned += enemy.stats.reward * 10;
           audio.play(enemy.isBoss ? 'boss_kill' : 'kill');
+          vfxBridge.emit({ type: 'kill', pos: { ...enemy.position }, color: 0x00ff88, reward: enemy.stats.reward, isBoss: enemy.isBoss });
           return null;
         }
+        vfxBridge.emit({ type: 'hit', pos: { ...enemy.position }, color: 0x00ff88, damage: entry.damage, isCrit: false });
         const mergedEffects = this.mergeStatusEffects(enemy.statusEffects, entry.statusEffects);
         return { ...enemy, hp: newHp, statusEffects: mergedEffects };
       })
@@ -248,8 +251,10 @@ export class CombatSystem implements GameSystem {
           goldEarned += enemy.stats.reward;
           scoreEarned += enemy.stats.reward * (enemy.isBoss ? 50 : 10);
           audio.play(enemy.isBoss ? 'boss_kill' : 'kill');
+          vfxBridge.emit({ type: 'kill', pos: { ...enemy.position }, color: 0xff6644, reward: enemy.stats.reward, isBoss: enemy.isBoss });
           return null;
         }
+        vfxBridge.emit({ type: 'hit', pos: { ...enemy.position }, color: 0xffaa44, damage: entry.damage, isCrit: false });
         const mergedEffects = this.mergeStatusEffects(enemy.statusEffects, entry.statusEffects);
         return { ...enemy, hp: newHp, statusEffects: mergedEffects };
       })

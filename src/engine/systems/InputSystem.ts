@@ -7,6 +7,8 @@ import { SKILL_CONFIG } from '../../config/skills';
 import { createTower } from '../../game/towers/factory';
 import { executeSkill } from '../../game/skills/execute';
 import { audio } from '../AudioManager';
+import { vfxBridge } from '../VfxBridge';
+import { CELL_SIZE } from '../../config/game';
 
 export class InputSystem implements GameSystem {
   readonly name = 'inputSystem';
@@ -124,6 +126,8 @@ export class InputSystem implements GameSystem {
       executeSkill(skillType, worldPos);
       const soundMap: Record<string, any> = { emp: 'skill_emp', airstrike: 'skill_airstrike', freeze: 'skill_freeze' };
       audio.play(soundMap[skillType]);
+      const skillCfg = SKILL_CONFIG[skillType];
+      vfxBridge.emit({ type: 'skill', pos: worldPos, radius: skillCfg.radius * CELL_SIZE, skillType });
       store.setActiveSkill(null);
       return;
     }
