@@ -137,7 +137,10 @@ export interface Skill {
 // --- Game State ---
 export type GamePhase = 'prep' | 'wave' | 'paused' | 'gameover' | 'victory';
 export type GameSpeed = 1 | 1.5 | 2 | 3;
-export type MapId = 'canyon' | 'crossroads' | 'fortress' | 'spiral' | 'gauntlet';
+export type MapId =
+  | 'canyon' | 'crossroads' | 'fortress' | 'spiral' | 'gauntlet'
+  | 'tundra' | 'volcano' | 'swamp' | 'desert' | 'neon_city'
+  | 'skybridge' | 'catacombs' | 'reactor' | 'void_rift' | 'last_stand';
 
 export interface GameState {
   phase: GamePhase;
