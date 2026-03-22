@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useGameStore } from '../../stores/gameStore';
-import { getTotalWaves, isBossWave, getWaveMapName, getWaveEnemyPreview } from '../../game/waves/manager';
+import { CAMPAIGN } from '../../config/campaign';
+import { isBossStage, isFinalBoss, getNextStagePreview } from '../../game/waves/manager';
 import { audio } from '../../engine/AudioManager';
 
 const COUNTDOWN_SECONDS = 3;
 
 export function WaveAnnounce() {
-  const { phase, wave, setPhase, nextWave, mapId } = useGameStore();
+  const { phase, mapIndex, stage, wave, stagesPerMap, setPhase, nextStage } = useGameStore();
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -15,7 +16,6 @@ export function WaveAnnounce() {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       return;
     }
-
     setCountdown(COUNTDOWN_SECONDS);
 
     timerRef.current = setInterval(() => {
@@ -23,10 +23,10 @@ export function WaveAnnounce() {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
           timerRef.current = null;
-          const store = useGameStore.getState();
-          if (store.phase === 'prep') {
-            store.nextWave();
-            store.setPhase('wave');
+          const s = useGameStore.getState();
+          if (s.phase === 'prep') {
+            s.nextStage();
+            s.setPhase('wave');
             audio.play('wave_start');
           }
           return 0;
@@ -42,33 +42,43 @@ export function WaveAnnounce() {
 
   if (phase !== 'prep') return null;
 
-  const totalWaves = getTotalWaves();
-  const nextWaveNum = wave + 1;
-  const isBoss = isBossWave(nextWaveNum);
-  const nextMapName = getWaveMapName(nextWaveNum);
-  const preview = getWaveEnemyPreview(nextWaveNum);
+  const campaign = CAMPAIGN[mapIndex];
+  const nextStageNum = stage + 1;
+  const isBoss = nextStageNum <= stagesPerMap && isBossStage(mapIndex, nextStageNum);
+  const isFinal = nextStageNum <= stagesPerMap && isFinalBoss(mapIndex, nextStageNum);
+  const isNewMap = stage === 0;
+  const preview = getNextStagePreview(mapIndex, nextStageNum, wave + 1);
 
   const handleStart = () => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-    nextWave();
+    nextStage();
     setPhase('wave');
     audio.play('wave_start');
   };
 
   return (
     <div style={styles.container}>
-      <div style={styles.text}>
-        {wave === 0 ? 'IRON BASTION ONLINE' : `WAVE ${wave} CLEARED`}
-      </div>
+      {/* New map announcement */}
+      {isNewMap && (
+        <div style={styles.newMap}>
+          <div style={styles.newMapLabel}>ENTERING</div>
+          <div style={styles.newMapName}>{campaign?.name ?? ''}</div>
+          <div style={styles.newMapStages}>{stagesPerMap} STAGES</div>
+        </div>
+      )}
 
-      {nextWaveNum <= totalWaves && (
+      {/* Stage cleared message */}
+      {!isNewMap && (
+        <div style={styles.text}>STAGE {stage} CLEARED</div>
+      )}
+
+      {/* Next stage info */}
+      {nextStageNum <= stagesPerMap && (
         <>
-          <div style={styles.next}>Wave {nextWaveNum} / {totalWaves}</div>
-
-          {/* Map name if changing */}
-          {nextMapName && (
-            <div style={styles.mapName}>{nextMapName}</div>
-          )}
+          <div style={styles.stageInfo}>
+            Stage {nextStageNum} / {stagesPerMap}
+            <span style={styles.mapLabel}> — {campaign?.name}</span>
+          </div>
 
           {/* Enemy preview */}
           {preview && (
@@ -82,12 +92,13 @@ export function WaveAnnounce() {
           )}
 
           {isBoss && (
-            <div style={styles.bossWarning}>WARNING: BOSS INCOMING</div>
+            <div style={isFinal ? styles.finalBossWarning : styles.bossWarning}>
+              {isFinal ? 'FINAL BOSS' : 'BOSS STAGE'}
+            </div>
           )}
         </>
       )}
 
-      {/* Countdown */}
       <div style={styles.countdown}>
         <div style={styles.countdownNumber}>{countdown}</div>
         <div style={styles.countdownBar}>
@@ -95,9 +106,7 @@ export function WaveAnnounce() {
         </div>
       </div>
 
-      <button style={styles.startBtn} onClick={handleStart}>
-        START NOW
-      </button>
+      <button style={styles.startBtn} onClick={handleStart}>START</button>
       <div style={styles.hint}>[SPACE]</div>
     </div>
   );
@@ -109,44 +118,59 @@ const styles: Record<string, React.CSSProperties> = {
     transform: 'translate(-50%, -50%)',
     textAlign: 'center', fontFamily: 'monospace', zIndex: 10,
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-    background: 'rgba(0,0,0,0.5)', padding: '20px 32px', borderRadius: 8,
+    background: 'rgba(0,0,0,0.6)', padding: '16px 28px', borderRadius: 8,
+    border: '1px solid #333',
   },
+  newMap: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+    marginBottom: 4,
+  },
+  newMapLabel: { fontSize: 10, color: '#888', letterSpacing: 4 },
+  newMapName: {
+    fontSize: 22, fontWeight: 'bold', color: '#ffd700', letterSpacing: 3,
+    textShadow: '0 0 15px rgba(255,215,0,0.4)',
+  },
+  newMapStages: { fontSize: 11, color: '#aa8800', letterSpacing: 2 },
   text: {
-    fontSize: 24, fontWeight: 'bold', color: '#00d4ff', letterSpacing: 4,
-    textShadow: '0 0 20px rgba(0,212,255,0.5)',
+    fontSize: 20, fontWeight: 'bold', color: '#00d4ff', letterSpacing: 3,
+    textShadow: '0 0 15px rgba(0,212,255,0.4)',
   },
-  next: { fontSize: 13, color: '#888' },
-  mapName: { fontSize: 11, color: '#ffd700', letterSpacing: 2 },
+  stageInfo: { fontSize: 13, color: '#aaa' },
+  mapLabel: { fontSize: 10, color: '#666' },
   preview: {
-    display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center',
-    maxWidth: 300, marginTop: 2,
+    display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center',
+    maxWidth: 300,
   },
   previewItem: {
-    fontSize: 9, color: '#666', background: '#1a1a2e',
-    padding: '2px 6px', borderRadius: 3, border: '1px solid #333',
+    fontSize: 8, color: '#666', background: '#1a1a2e',
+    padding: '2px 5px', borderRadius: 3, border: '1px solid #2a2a3e',
   },
   bossWarning: {
-    fontSize: 14, fontWeight: 'bold', color: '#ff00ff', letterSpacing: 3,
+    fontSize: 13, fontWeight: 'bold', color: '#ff8800', letterSpacing: 3,
+    textShadow: '0 0 10px rgba(255,136,0,0.4)',
+  },
+  finalBossWarning: {
+    fontSize: 15, fontWeight: 'bold', color: '#ff00ff', letterSpacing: 3,
     textShadow: '0 0 15px rgba(255,0,255,0.5)',
     animation: 'pulse 1s ease-in-out infinite',
   },
   countdown: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginTop: 2,
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginTop: 2,
   },
   countdownNumber: {
-    fontSize: 32, fontWeight: 'bold', color: '#e94560',
-    textShadow: '0 0 15px rgba(233,69,96,0.5)',
+    fontSize: 28, fontWeight: 'bold', color: '#e94560',
+    textShadow: '0 0 10px rgba(233,69,96,0.4)',
   },
   countdownBar: {
-    width: 100, height: 3, background: '#333', borderRadius: 2, overflow: 'hidden',
+    width: 80, height: 3, background: '#333', borderRadius: 2, overflow: 'hidden',
   },
   countdownFill: {
     height: '100%', background: '#e94560', borderRadius: 2, transition: 'width 1s linear',
   },
   startBtn: {
-    padding: '8px 24px', border: '2px solid #e94560', borderRadius: 4,
-    background: 'rgba(233,69,96,0.15)', color: '#e94560', cursor: 'pointer',
-    fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold', letterSpacing: 3,
+    padding: '7px 22px', border: '2px solid #e94560', borderRadius: 4,
+    background: 'rgba(233,69,96,0.12)', color: '#e94560', cursor: 'pointer',
+    fontFamily: 'monospace', fontSize: 12, fontWeight: 'bold', letterSpacing: 3,
   },
-  hint: { fontSize: 10, color: '#444' },
+  hint: { fontSize: 9, color: '#444' },
 };

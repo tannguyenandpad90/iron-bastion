@@ -141,8 +141,11 @@ export type MapId = 'canyon' | 'crossroads' | 'fortress' | 'spiral' | 'gauntlet'
 
 export interface GameState {
   phase: GamePhase;
-  level: number;
-  wave: number;
+  level: number;        // unused legacy
+  wave: number;         // global wave counter (for scaling)
+  mapIndex: number;     // 0-based index into campaign maps
+  stage: number;        // 1-based stage within current map
+  stagesPerMap: number; // how many stages this map has
   gold: number;
   lives: number;
   energy: number;

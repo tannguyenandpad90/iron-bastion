@@ -4,6 +4,7 @@ import type {
   TowerType, SkillType, GameSpeed, MapId,
 } from '../types';
 import { INITIAL_GAME_STATE } from '../config/game';
+import { CAMPAIGN } from '../config/campaign';
 
 interface GameStore extends GameState {
   towers: Tower[];
@@ -17,6 +18,8 @@ interface GameStore extends GameState {
   // Game State
   setPhase: (phase: GamePhase) => void;
   nextWave: () => void;
+  nextStage: () => void;
+  advanceToNextMap: () => boolean; // returns false if no more maps (victory)
   addGold: (amount: number) => void;
   spendGold: (amount: number) => boolean;
   loseLives: (amount: number) => void;
@@ -68,6 +71,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setPhase: (phase) => set({ phase }),
   nextWave: () => set((s) => ({ wave: s.wave + 1 })),
+  nextStage: () => set((s) => ({ stage: s.stage + 1, wave: s.wave + 1 })),
+  advanceToNextMap: () => {
+    const { mapIndex } = get();
+    const nextIdx = mapIndex + 1;
+    if (nextIdx >= CAMPAIGN.length) return false; // victory
+
+    const nextCampaign = CAMPAIGN[nextIdx];
+    set({
+      mapIndex: nextIdx,
+      stage: 0,
+      stagesPerMap: nextCampaign.stages,
+      mapId: nextCampaign.mapId,
+      towers: [],
+      projectiles: [],
+      enemies: [],
+    });
+    // Bonus gold for new map
+    if (nextCampaign.startGoldBonus > 0) {
+      get().addGold(nextCampaign.startGoldBonus);
+    }
+    return true;
+  },
   addGold: (amount) => set((s) => ({ gold: s.gold + amount })),
   spendGold: (amount) => {
     const { gold } = get();
@@ -85,7 +110,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resetGame: () =>
     set({
       ...INITIAL_GAME_STATE,
-      mapId: get().mapId, // preserve map choice
       towers: [],
       enemies: [],
       projectiles: [],

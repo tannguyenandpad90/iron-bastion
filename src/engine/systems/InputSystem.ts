@@ -206,7 +206,7 @@ export class InputSystem implements GameSystem {
         break;
       case ' ':
         if (store.phase === 'prep') {
-          store.nextWave();
+          store.nextStage();
           store.setPhase('wave');
         } else if (store.phase === 'wave') {
           store.setPhase('paused');

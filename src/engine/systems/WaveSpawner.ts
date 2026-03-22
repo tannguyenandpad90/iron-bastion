@@ -1,8 +1,7 @@
 import type { GameSystem, GameMap, EnemyType, EnemyTrait } from '../../types';
 import { useGameStore } from '../../stores/gameStore';
-import { WAVES } from '../../config/waves';
+import { generateStage, CAMPAIGN } from '../../config/campaign';
 import { createEnemy } from '../../game/enemies/factory';
-import { getMap } from '../../config/maps';
 import { audio } from '../AudioManager';
 
 interface SpawnEntry {
@@ -19,14 +18,13 @@ export class WaveSpawner implements GameSystem {
   private spawnTimer = 0;
   private currentSpawnIndex = 0;
   private waveActive = false;
-  private lastWaveNumber = 0;
+  private lastGlobalWave = -1;
   private allSpawned = false;
 
   constructor(map: GameMap) {
     this.map = map;
   }
 
-  /** Called by GameScene when map changes */
   setMap(map: GameMap) {
     this.map = map;
   }
@@ -42,10 +40,12 @@ export class WaveSpawner implements GameSystem {
       return;
     }
 
-    if (!this.waveActive || store.wave !== this.lastWaveNumber) {
-      this.startWave(store.wave);
+    // Start new stage
+    if (!this.waveActive || store.wave !== this.lastGlobalWave) {
+      this.startStage(store);
     }
 
+    // Spawn enemies
     if (this.currentSpawnIndex < this.spawnQueue.length) {
       this.spawnTimer += dt * 1000;
 
@@ -64,48 +64,42 @@ export class WaveSpawner implements GameSystem {
       }
     }
 
+    // Stage complete
     if (this.allSpawned && store.enemies.length === 0) {
-      this.onWaveComplete();
+      this.onStageComplete();
     }
   }
 
-  private startWave(waveNumber: number) {
-    const waveIndex = Math.min(waveNumber - 1, WAVES.length - 1);
-    const wave = WAVES[waveIndex];
-    if (!wave) return;
+  private startStage(store: ReturnType<typeof useGameStore.getState>) {
+    const { mapIndex, stage, wave } = store;
 
-    // Switch map if wave specifies a different one
-    if (wave.mapId) {
-      const store = useGameStore.getState();
-      if (wave.mapId !== store.mapId) {
-        store.setMapId(wave.mapId);
-        this.map = getMap(wave.mapId);
-      }
-    }
+    // Generate stage from campaign config
+    const stageData = generateStage(mapIndex, stage, wave);
 
     this.spawnQueue = [];
     this.currentSpawnIndex = 0;
     this.spawnTimer = 0;
     this.waveActive = true;
     this.allSpawned = false;
-    this.lastWaveNumber = waveNumber;
+    this.lastGlobalWave = wave;
 
     audio.play('wave_start');
 
+    // Flatten segments into spawn queue
     let isFirst = true;
-    for (const segment of wave.segments) {
+    for (const segment of stageData.segments) {
       for (let i = 0; i < segment.count; i++) {
         this.spawnQueue.push({
           enemyType: segment.enemyType,
           traits: (segment.traits as EnemyTrait[]) ?? [],
-          delay: isFirst ? 300 : segment.interval,
+          delay: isFirst ? 500 : segment.interval,
         });
         isFirst = false;
       }
     }
   }
 
-  private spawnOneEnemy(entry: SpawnEntry, waveNumber: number) {
+  private spawnOneEnemy(entry: SpawnEntry, globalWave: number) {
     const store = useGameStore.getState();
     const spawnCell = this.map.path[0];
 
@@ -113,31 +107,40 @@ export class WaveSpawner implements GameSystem {
       entry.enemyType,
       spawnCell,
       this.map.cellSize,
-      waveNumber,
+      globalWave,
       entry.traits,
     );
     store.addEnemy(enemy);
   }
 
-  private onWaveComplete() {
+  private onStageComplete() {
     const store = useGameStore.getState();
-    const waveIndex = Math.min(store.wave - 1, WAVES.length - 1);
-    const wave = WAVES[waveIndex];
+    const { mapIndex, stage } = store;
+    const campaign = CAMPAIGN[mapIndex];
+    const stageData = generateStage(mapIndex, stage, store.wave);
 
-    if (wave) {
-      store.addGold(wave.reward);
-      store.addScore(wave.reward);
-    }
+    // Award reward
+    store.addGold(stageData.reward);
+    store.addScore(stageData.reward * 2);
 
     audio.play('wave_clear');
 
     this.waveActive = false;
     this.allSpawned = false;
 
-    if (store.wave >= WAVES.length) {
-      store.setPhase('victory');
-      audio.play('victory');
+    // Check if map is complete
+    if (stage >= campaign.stages) {
+      // Try advance to next map
+      if (!store.advanceToNextMap()) {
+        // No more maps — victory!
+        store.setPhase('victory');
+        audio.play('victory');
+      } else {
+        // New map — prep phase
+        store.setPhase('prep');
+      }
     } else {
+      // Next stage in same map
       store.setPhase('prep');
     }
   }

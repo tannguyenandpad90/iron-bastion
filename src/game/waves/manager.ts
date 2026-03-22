@@ -1,57 +1,64 @@
-import type { Wave, WaveSegment } from '../../types';
-import { WAVES } from '../../config/waves';
-import { MAPS } from '../../config/maps';
+import { CAMPAIGN, getTotalStages, generateStage } from '../../config/campaign';
+import { useGameStore } from '../../stores/gameStore';
 
-export function getWave(waveNumber: number): Wave | null {
-  const index = waveNumber - 1;
-  if (index < 0 || index >= WAVES.length) return null;
-  return WAVES[index];
+export function getCurrentMapName(): string {
+  const { mapIndex } = useGameStore.getState();
+  return CAMPAIGN[mapIndex]?.name ?? '';
 }
 
-export function getTotalEnemies(wave: Wave): number {
-  return wave.segments.reduce((sum, seg) => sum + seg.count, 0);
+export function getStagesForCurrentMap(): number {
+  const { mapIndex } = useGameStore.getState();
+  return CAMPAIGN[mapIndex]?.stages ?? 0;
 }
 
-export function getSpawnSchedule(wave: Wave): { segment: WaveSegment; delay: number }[] {
-  const schedule: { segment: WaveSegment; delay: number }[] = [];
-  let cumDelay = 500;
-
-  for (const segment of wave.segments) {
-    for (let i = 0; i < segment.count; i++) {
-      schedule.push({
-        segment,
-        delay: i === 0 ? cumDelay : segment.interval,
-      });
-      cumDelay = segment.interval;
-    }
-  }
-
-  return schedule;
+export function getTotalMaps(): number {
+  return CAMPAIGN.length;
 }
 
-export function isBossWave(waveNumber: number): boolean {
-  const wave = getWave(waveNumber);
-  return wave?.isBoss ?? false;
+export { getTotalStages };
+
+export function isBossStage(mapIndex: number, stage: number): boolean {
+  const campaign = CAMPAIGN[mapIndex];
+  if (!campaign) return false;
+  return stage === campaign.stages || stage === Math.ceil(campaign.stages / 2);
 }
 
-export function getTotalWaves(): number {
-  return WAVES.length;
+export function isFinalBoss(mapIndex: number, stage: number): boolean {
+  const campaign = CAMPAIGN[mapIndex];
+  if (!campaign) return false;
+  return stage === campaign.stages;
 }
 
-export function getWaveMapName(waveNumber: number): string | null {
-  const wave = getWave(waveNumber);
-  if (!wave?.mapId) return null;
-  const map = MAPS[wave.mapId];
-  return map?.name ?? null;
-}
+export function getNextStagePreview(mapIndex: number, stage: number, globalWave: number): {
+  type: string; count: number; traits: string;
+}[] | null {
+  if (mapIndex >= CAMPAIGN.length) return null;
+  const campaign = CAMPAIGN[mapIndex];
+  if (stage > campaign.stages) return null;
 
-export function getWaveEnemyPreview(waveNumber: number): { type: string; count: number; traits: string }[] | null {
-  const wave = getWave(waveNumber);
-  if (!wave) return null;
-
-  return wave.segments.map((seg) => ({
+  const data = generateStage(mapIndex, stage, globalWave);
+  return data.segments.map((seg) => ({
     type: seg.enemyType,
     count: seg.count,
     traits: seg.traits?.join(', ') ?? '',
   }));
+}
+
+// Legacy compat
+export function getTotalWaves(): number {
+  return getTotalStages();
+}
+
+export function isBossWave(waveNumber: number): boolean {
+  const { mapIndex, stage } = useGameStore.getState();
+  return isBossStage(mapIndex, stage + 1);
+}
+
+export function getWaveMapName(_waveNumber: number): string | null {
+  return getCurrentMapName();
+}
+
+export function getWaveEnemyPreview(_waveNumber: number): { type: string; count: number; traits: string }[] | null {
+  const { mapIndex, stage, wave } = useGameStore.getState();
+  return getNextStagePreview(mapIndex, stage + 1, wave + 1);
 }
