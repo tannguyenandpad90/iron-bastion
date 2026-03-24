@@ -4,10 +4,13 @@ import { useGameStore } from '../../stores/gameStore';
 
 // Neon projectile styles
 const PROJ_STYLE: Record<string, { core: number; glow: number; size: number; trail: boolean }> = {
-  cannon: { core: 0x00F5A0, glow: 0x00FFCC, size: 4, trail: true },
-  aoe:    { core: 0xFF3D6E, glow: 0xFF6B6B, size: 5, trail: true },
-  sniper: { core: 0xFFD166, glow: 0xFFE088, size: 3, trail: true },
-  tesla:  { core: 0x9B5CFF, glow: 0xBB88FF, size: 3, trail: false },
+  cannon:  { core: 0x00F5A0, glow: 0x00FFCC, size: 4, trail: true },
+  aoe:     { core: 0xFF3D6E, glow: 0xFF6B6B, size: 5, trail: true },
+  sniper:  { core: 0xFFD166, glow: 0xFFE088, size: 3, trail: true },
+  tesla:   { core: 0x9B5CFF, glow: 0xBB88FF, size: 3, trail: false },
+  flame:   { core: 0xFF8C00, glow: 0xFFAA33, size: 3, trail: false },
+  missile: { core: 0xFF4444, glow: 0xFF6666, size: 6, trail: true },
+  railgun: { core: 0x44DDFF, glow: 0x88EEFF, size: 3, trail: true },
 };
 
 const DEFAULT = { core: 0x00F5A0, glow: 0x00FFCC, size: 3, trail: true };

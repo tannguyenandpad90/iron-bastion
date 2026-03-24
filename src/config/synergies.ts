@@ -8,46 +8,22 @@ export interface SynergyConfig {
 }
 
 export const SYNERGY_CONFIG: SynergyConfig[] = [
-  {
-    pair: ['cannon', 'laser'],
-    bonusType: 'critChance',
-    value: 0.15,
-    description: '+15% crit chance',
-  },
-  {
-    pair: ['laser', 'aoe'],
-    bonusType: 'burnDot',
-    value: 5,
-    description: 'Burn DOT 5 dmg/sec',
-  },
-  {
-    pair: ['cannon', 'aoe'],
-    bonusType: 'shrapnel',
-    value: 0.3,
-    description: '+30% splash range',
-  },
-  {
-    pair: ['sniper', 'cannon'],
-    bonusType: 'piercing',
-    value: 0.25,
-    description: '+25% armor pierce',
-  },
-  {
-    pair: ['tesla', 'laser'],
-    bonusType: 'chainBoost',
-    value: 2,
-    description: '+2 chain targets',
-  },
-  {
-    pair: ['tesla', 'aoe'],
-    bonusType: 'damageBoost',
-    value: 0.2,
-    description: '+20% damage',
-  },
-  {
-    pair: ['sniper', 'tesla'],
-    bonusType: 'critChance',
-    value: 0.2,
-    description: '+20% crit chance',
-  },
+  // Original synergies
+  { pair: ['cannon', 'laser'],   bonusType: 'critChance',  value: 0.15, description: '+15% crit' },
+  { pair: ['laser', 'aoe'],      bonusType: 'burnDot',     value: 5,    description: '+5 burn DOT' },
+  { pair: ['cannon', 'aoe'],     bonusType: 'shrapnel',    value: 0.3,  description: '+30% splash' },
+  { pair: ['sniper', 'cannon'],  bonusType: 'piercing',    value: 0.25, description: '+25% pierce' },
+  { pair: ['tesla', 'laser'],    bonusType: 'chainBoost',  value: 2,    description: '+2 chains' },
+  { pair: ['tesla', 'aoe'],      bonusType: 'damageBoost', value: 0.2,  description: '+20% damage' },
+  { pair: ['sniper', 'tesla'],   bonusType: 'critChance',  value: 0.2,  description: '+20% crit' },
+  // New tower synergies
+  { pair: ['flame', 'laser'],    bonusType: 'burnDot',     value: 8,    description: '+8 burn DOT' },
+  { pair: ['flame', 'aoe'],      bonusType: 'shrapnel',    value: 0.5,  description: '+50% cone' },
+  { pair: ['missile', 'cannon'], bonusType: 'damageBoost', value: 0.25, description: '+25% damage' },
+  { pair: ['missile', 'aoe'],    bonusType: 'shrapnel',    value: 0.4,  description: '+40% blast' },
+  { pair: ['railgun', 'sniper'], bonusType: 'critChance',  value: 0.3,  description: '+30% crit' },
+  { pair: ['railgun', 'tesla'],  bonusType: 'piercing',    value: 0.4,  description: '+40% pierce' },
+  { pair: ['flame', 'tesla'],    bonusType: 'chainBoost',  value: 1,    description: '+1 chain' },
+  { pair: ['missile', 'sniper'], bonusType: 'damageBoost', value: 0.3,  description: '+30% damage' },
+  { pair: ['railgun', 'laser'],  bonusType: 'damageBoost', value: 0.35, description: '+35% damage' },
 ];

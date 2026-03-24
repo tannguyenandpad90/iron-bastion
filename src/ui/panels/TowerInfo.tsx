@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useGameStore } from '../../stores/gameStore';
-import { getUpgradeCost, canUpgrade, getSellValue } from '../../game/towers/factory';
+import { getUpgradeCost, canUpgrade, getSellValue, getActiveMilestones, getNextMilestone } from '../../game/towers/factory';
 import { tryUpgradeTower } from '../../game/upgrades/apply';
 import { sellTower } from '../../game/economy/transactions';
 import type { TargetingMode } from '../../types';
@@ -47,6 +47,32 @@ export function TowerInfo() {
           />
         )}
       </div>
+
+      {/* Milestones */}
+      {(() => {
+        const active = getActiveMilestones(tower.towerType, tower.level);
+        const next = getNextMilestone(tower.towerType, tower.level);
+        return (
+          <div style={styles.milestoneSection}>
+            {active.length > 0 && (
+              <>
+                <div style={{ ...styles.synergyTitle, color: '#00F5A0' }}>MILESTONES</div>
+                {active.map((m, i) => (
+                  <div key={i} style={styles.milestoneLine}>
+                    <span style={styles.msLevel}>LV{m.level}</span>
+                    <span style={styles.msName}>{m.name}</span>
+                  </div>
+                ))}
+              </>
+            )}
+            {next && (
+              <div style={styles.nextMs}>
+                NEXT LV{next.level}: {next.name} — <span style={{ color: '#4A5A7A' }}>{next.effect}</span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {tower.synergyBuffs.length > 0 && (
         <div style={styles.synergySection}>
@@ -231,6 +257,11 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 1,
   },
   maxLevel: { fontSize: 10, color: '#FFD166', textAlign: 'center', letterSpacing: 2 },
+  milestoneSection: { borderTop: '1px solid #1A2333', paddingTop: 4 },
+  milestoneLine: { display: 'flex', gap: 6, fontSize: 9, alignItems: 'center' },
+  msLevel: { color: '#00F5A0', fontWeight: 700, fontSize: 8, minWidth: 24 },
+  msName: { color: '#8A9ABB', fontWeight: 600 },
+  nextMs: { fontSize: 8, color: '#3A4A6A', marginTop: 3, fontStyle: 'italic' },
   synergyHintSection: { borderTop: '1px solid #1A2333', paddingTop: 4 },
   hintLine: { display: 'flex', justifyContent: 'space-between', fontSize: 9, gap: 4 },
   hintDesc: { color: '#3A4A6A', fontSize: 8 },

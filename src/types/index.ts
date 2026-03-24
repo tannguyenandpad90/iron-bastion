@@ -24,7 +24,7 @@ export interface Entity {
 export type EntityType = 'tower' | 'enemy' | 'projectile' | 'effect';
 
 // --- Tower ---
-export type TowerType = 'cannon' | 'laser' | 'aoe' | 'sniper' | 'tesla';
+export type TowerType = 'cannon' | 'laser' | 'aoe' | 'sniper' | 'tesla' | 'flame' | 'missile' | 'railgun';
 export type TargetingMode = 'first' | 'strongest' | 'closest';
 
 export interface TowerStats {
