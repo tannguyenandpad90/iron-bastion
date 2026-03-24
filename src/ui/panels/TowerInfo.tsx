@@ -5,6 +5,7 @@ import { tryUpgradeTower } from '../../game/upgrades/apply';
 import { sellTower } from '../../game/economy/transactions';
 import type { TargetingMode } from '../../types';
 import { TOWER_DESCRIPTIONS } from '../../config/towers';
+import { SYNERGY_CONFIG } from '../../config/synergies';
 import { audio } from '../../engine/AudioManager';
 
 const TARGETING_MODES: { mode: TargetingMode; label: string }[] = [
@@ -49,7 +50,7 @@ export function TowerInfo() {
 
       {tower.synergyBuffs.length > 0 && (
         <div style={styles.synergySection}>
-          <div style={styles.synergyTitle}>SYNERGIES</div>
+          <div style={styles.synergyTitle}>ACTIVE SYNERGIES</div>
           {tower.synergyBuffs.map((buff, i) => (
             <div key={i} style={styles.synergyLine}>
               {buff.bonusType}: +{buff.value < 1 ? `${(buff.value * 100).toFixed(0)}%` : buff.value}
@@ -57,6 +58,21 @@ export function TowerInfo() {
           ))}
         </div>
       )}
+
+      {/* Synergy hints — what towers pair with this one */}
+      <div style={styles.synergyHintSection}>
+        <div style={{ ...styles.synergyTitle, color: '#3A4A6A' }}>PAIRS WITH</div>
+        {SYNERGY_CONFIG.filter((s) => s.pair.includes(tower.towerType)).map((s, i) => {
+          const partner = s.pair[0] === tower.towerType ? s.pair[1] : s.pair[0];
+          const partnerInfo = TOWER_DESCRIPTIONS[partner];
+          return (
+            <div key={i} style={styles.hintLine}>
+              <span style={{ color: partnerInfo.color }}>{partnerInfo.name}</span>
+              <span style={styles.hintDesc}>{s.description}</span>
+            </div>
+          );
+        })}
+      </div>
 
       <div style={styles.targetingSection}>
         <div style={styles.targetingTitle}>TARGET</div>
@@ -214,7 +230,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'monospace', fontSize: 12, fontWeight: 'bold',
     letterSpacing: 1,
   },
-  maxLevel: { fontSize: 10, color: '#ffd700', textAlign: 'center', letterSpacing: 2 },
+  maxLevel: { fontSize: 10, color: '#FFD166', textAlign: 'center', letterSpacing: 2 },
+  synergyHintSection: { borderTop: '1px solid #1A2333', paddingTop: 4 },
+  hintLine: { display: 'flex', justifyContent: 'space-between', fontSize: 9, gap: 4 },
+  hintDesc: { color: '#3A4A6A', fontSize: 8 },
 
   // --- Sell button ---
   sellWrapper: {

@@ -1,8 +1,21 @@
+import { useEffect } from 'react';
 import { useGameStore } from '../../stores/gameStore';
+import { useStatsStore } from '../../stores/statsStore';
 import { CAMPAIGN } from '../../config/campaign';
 
 export function GameOverScreen({ onQuit }: { onQuit: () => void }) {
   const { phase, score, wave, lives, mapIndex, stage, resetGame } = useGameStore();
+  // Record stats on game end
+  useEffect(() => {
+    if (phase === 'gameover' || phase === 'victory') {
+      const stats = useStatsStore.getState();
+      stats.recordScore(score);
+      stats.recordWave(wave);
+      stats.recordMap(mapIndex);
+      stats.addGamePlayed();
+    }
+  }, [phase]);
+
   if (phase !== 'gameover' && phase !== 'victory') return null;
 
   const isVictory = phase === 'victory';

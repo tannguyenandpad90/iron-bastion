@@ -134,20 +134,23 @@ export class DamageSystem implements GameSystem {
     }
   }
 
-  private applyHealerAura(enemies: Enemy[], dt: number): Enemy[] {
-    const healers = enemies.filter((e) => e.enemyType === 'healer' && e.hp > 0);
-    if (healers.length === 0) return enemies;
+  private applyHealerAura(enemies: Enemy[], _dt: number): Enemy[] {
+    // Only healers whose cooldown just reset (within this tick) should heal
+    const activeHealers = enemies.filter(
+      (e) => e.enemyType === 'healer' && e.hp > 0 && e.healCooldown === HEALER_COOLDOWN,
+    );
+    if (activeHealers.length === 0) return enemies;
 
     let healed = false;
     const result = enemies.map((enemy) => {
       if (enemy.hp >= enemy.stats.maxHp) return enemy;
 
-      for (const healer of healers) {
+      for (const healer of activeHealers) {
         if (healer.id === enemy.id) continue;
         const dx = enemy.position.x - healer.position.x;
         const dy = enemy.position.y - healer.position.y;
         if (dx * dx + dy * dy <= HEALER_RANGE * HEALER_RANGE) {
-          const heal = enemy.stats.maxHp * HEALER_AMOUNT * dt;
+          const heal = enemy.stats.maxHp * HEALER_AMOUNT;
           healed = true;
           return { ...enemy, hp: Math.min(enemy.stats.maxHp, enemy.hp + heal) };
         }
