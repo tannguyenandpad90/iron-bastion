@@ -225,6 +225,14 @@ export class CombatSystem implements GameSystem {
         }
 
         audio.play('hit');
+
+        // Plasma mega explosion VFX
+        if (proj.aoeRadius && proj.aoeRadius > 80) {
+          const tower = store.towers.find((t) => t.id === proj.sourceId);
+          if (tower?.towerType === 'plasma') {
+            vfxBridge.emit({ type: 'plasma_impact', pos: { ...target.position }, radius: proj.aoeRadius });
+          }
+        }
       } else {
         const dist = Math.sqrt(distSq);
         const speed = proj.speed * dt;

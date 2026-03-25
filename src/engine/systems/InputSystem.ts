@@ -201,6 +201,9 @@ export class InputSystem implements GameSystem {
       case '8':
         store.selectTowerType('railgun');
         break;
+      case '9':
+        store.selectTowerType('plasma');
+        break;
       case 'q':
       case 'Q':
         store.setActiveSkill(store.activeSkill === 'emp' ? null : 'emp');

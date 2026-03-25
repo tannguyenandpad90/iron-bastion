@@ -1,12 +1,12 @@
 import type { WorldPosition } from '../types';
 
-// Global VFX event bus — systems emit, EffectRenderer consumes
 type VfxEvent =
   | { type: 'hit'; pos: WorldPosition; color: number; damage: number; isCrit: boolean }
   | { type: 'kill'; pos: WorldPosition; color: number; reward: number; isBoss: boolean }
   | { type: 'muzzle'; pos: WorldPosition; color: number; dirX: number; dirY: number }
   | { type: 'aoe_hit'; pos: WorldPosition; radius: number; color: number }
-  | { type: 'skill'; pos: WorldPosition; radius: number; skillType: string };
+  | { type: 'skill'; pos: WorldPosition; radius: number; skillType: string }
+  | { type: 'plasma_impact'; pos: WorldPosition; radius: number };
 
 class VfxBridge {
   private queue: VfxEvent[] = [];

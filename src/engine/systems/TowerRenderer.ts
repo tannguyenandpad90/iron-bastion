@@ -11,6 +11,7 @@ const TC: Record<TowerType, { main: number; glow: number; dark: number }> = {
   flame:   { main: 0xFF8C00, glow: 0xFFAA33, dark: 0x884400 },
   missile: { main: 0xFF4444, glow: 0xFF6666, dark: 0x882222 },
   railgun: { main: 0x44DDFF, glow: 0x88EEFF, dark: 0x226688 },
+  plasma:  { main: 0xFF00FF, glow: 0xFF88FF, dark: 0x880088 },
 };
 
 interface TSprite {
@@ -117,6 +118,26 @@ export class TowerRenderer implements GameSystem {
             sp.beam.stroke({ color: c.main, width: 3, alpha: 0.5 });
             sp.beam.moveTo(0, 0); sp.beam.lineTo(ex, ey);
             sp.beam.stroke({ color: 0xffffff, width: 1.5, alpha: 0.8 });
+            sp.beam.visible = true;
+          } else if (tt === 'plasma' && firing) {
+            // Plasma: pulsing energy charge VFX at barrel tip
+            const ang = Math.atan2(dy, dx);
+            const cellSz = this.map.cellSize * 0.5;
+            const tipX = Math.cos(ang) * cellSz * 0.4;
+            const tipY = Math.sin(ang) * cellSz * 0.4;
+            const pulse = 8 + Math.sin(Date.now() * 0.02) * 4;
+            // Outer glow
+            sp.beam.circle(tipX, tipY, pulse + 6);
+            sp.beam.fill({ color: 0xFF88FF, alpha: 0.1 });
+            // Mid glow
+            sp.beam.circle(tipX, tipY, pulse + 2);
+            sp.beam.fill({ color: 0xFF00FF, alpha: 0.2 });
+            // Core
+            sp.beam.circle(tipX, tipY, pulse);
+            sp.beam.fill({ color: 0xFF44FF, alpha: 0.4 });
+            // White hot center
+            sp.beam.circle(tipX, tipY, pulse * 0.3);
+            sp.beam.fill({ color: 0xffffff, alpha: 0.7 });
             sp.beam.visible = true;
           } else {
             sp.beam.visible = false;
@@ -317,6 +338,24 @@ export class TowerRenderer implements GameSystem {
           g.moveTo(Math.cos(a) * h * 0.2, Math.sin(a) * h * 0.2);
           g.lineTo(Math.cos(a) * h * 0.5, Math.sin(a) * h * 0.5);
           g.stroke({ color: c.glow, width: 0.5, alpha: 0.25 });
+        }
+        break;
+      case 'plasma':
+        // Double circle with pulsing core — the most imposing tower
+        g.circle(0, 0, h); g.fill({ color: fill });
+        g.circle(0, 0, h); g.stroke({ color: c.main, width: strokeW + 0.5, alpha: strokeA });
+        // Inner ring
+        g.circle(0, 0, h * 0.7); g.stroke({ color: c.main, width: 1, alpha: 0.3 });
+        // Plasma core — multi-layer glow
+        g.circle(0, 0, h * 0.45); g.fill({ color: c.glow, alpha: 0.08 });
+        g.circle(0, 0, h * 0.3); g.fill({ color: c.main, alpha: 0.2 });
+        g.circle(0, 0, h * 0.15); g.fill({ color: c.glow, alpha: 0.5 });
+        g.circle(0, 0, h * 0.06); g.fill({ color: 0xffffff, alpha: 0.8 });
+        // Orbital dots (decorative)
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI * 2 * i) / 6;
+          g.circle(Math.cos(a) * h * 0.55, Math.sin(a) * h * 0.55, 1.5);
+          g.fill({ color: c.glow, alpha: 0.3 });
         }
         break;
     }

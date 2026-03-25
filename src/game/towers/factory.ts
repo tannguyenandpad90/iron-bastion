@@ -149,6 +149,17 @@ export function createProjectile(tower: Tower, target: Enemy): Projectile {
     aoeRadius = tower.stats.range * 0.5 * 64 * splashMultiplier;
   }
 
+  // Plasma: massive AoE
+  if (tower.towerType === 'plasma') {
+    let plasmaMultiplier = 1;
+    if (milestoneNames.has('Plasma Core')) plasmaMultiplier += 0.5;
+    if (milestoneNames.has('Nova Burst')) plasmaMultiplier += 2.0;
+    for (const buff of tower.synergyBuffs) {
+      if (buff.bonusType === 'shrapnel') plasmaMultiplier += buff.value;
+    }
+    aoeRadius = tower.stats.range * 0.7 * 64 * plasmaMultiplier;
+  }
+
   // Flame cone: acts like AoE at short range
   if (tower.towerType === 'flame') {
     let coneMultiplier = 1;

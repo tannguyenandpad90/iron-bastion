@@ -26,4 +26,9 @@ export const SYNERGY_CONFIG: SynergyConfig[] = [
   { pair: ['flame', 'tesla'],    bonusType: 'chainBoost',  value: 1,    description: '+1 chain' },
   { pair: ['missile', 'sniper'], bonusType: 'damageBoost', value: 0.3,  description: '+30% damage' },
   { pair: ['railgun', 'laser'],  bonusType: 'damageBoost', value: 0.35, description: '+35% damage' },
+  // Plasma synergies
+  { pair: ['plasma', 'tesla'],   bonusType: 'chainBoost',  value: 3,    description: '+3 chains' },
+  { pair: ['plasma', 'aoe'],     bonusType: 'shrapnel',    value: 0.6,  description: '+60% blast' },
+  { pair: ['plasma', 'flame'],   bonusType: 'burnDot',     value: 10,   description: '+10 burn DOT' },
+  { pair: ['plasma', 'railgun'], bonusType: 'damageBoost', value: 0.5,  description: '+50% damage' },
 ];

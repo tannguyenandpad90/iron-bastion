@@ -4,7 +4,7 @@ import type { TowerType } from '../../types';
 
 const NEON: Record<TowerType, string> = {
   cannon: '#00F5A0', laser: '#00E5FF', aoe: '#FF3D6E', sniper: '#FFD166', tesla: '#9B5CFF',
-  flame: '#FF8C00', missile: '#FF4444', railgun: '#44DDFF',
+  flame: '#FF8C00', missile: '#FF4444', railgun: '#44DDFF', plasma: '#FF00FF',
 };
 
 export function TowerShop() {
@@ -58,7 +58,7 @@ export function TowerShop() {
       <div style={styles.divider} />
       <div style={styles.help}>
         <div style={styles.helpTitle}>CONTROLS</div>
-        <div style={styles.helpLine}>[1-8] Tower  [Q/W/E] Skill</div>
+        <div style={styles.helpLine}>[1-9] Tower  [Q/W/E] Skill</div>
         <div style={styles.helpLine}>[Click] Place  [Right] Cancel</div>
         <div style={styles.helpLine}>[Space] {phase === 'wave' ? 'Pause' : 'Start'}</div>
       </div>

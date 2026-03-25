@@ -24,6 +24,11 @@ class SoundSynth {
         case 'shoot_aoe': this.playTone(ctx, 150, 0.12, 'triangle', 0.12); break;
         case 'shoot_sniper': this.playTone(ctx, 400, 0.15, 'square', 0.2); break;
         case 'shoot_tesla': this.playNoise(ctx, 0.06, 0.1); break;
+        case 'shoot_flame': this.playNoise(ctx, 0.04, 0.08); break;
+        case 'shoot_missile': this.playTone(ctx, 120, 0.15, 'sawtooth', 0.18); break;
+        case 'shoot_railgun': this.playTone(ctx, 600, 0.2, 'square', 0.2, true); break;
+        case 'shoot_plasma': this.playPlasmaShot(ctx); break;
+        case 'plasma_boom': this.playPlasmaBoom(ctx); break;
         case 'hit': this.playTone(ctx, 300, 0.04, 'square', 0.06); break;
         case 'kill': this.playTone(ctx, 600, 0.08, 'sine', 0.1, true); break;
         case 'boss_kill': this.playBossKill(ctx); break;
@@ -114,6 +119,22 @@ class SoundSynth {
     setTimeout(() => this.playNoise(ctx, 0.4, 0.2), 150);
   }
 
+  private playPlasmaShot(ctx: AudioContext) {
+    // Deep rumble + high whine
+    this.playTone(ctx, 80, 0.3, 'sawtooth', 0.15);
+    this.playTone(ctx, 600, 0.2, 'sine', 0.08);
+    setTimeout(() => this.playTone(ctx, 400, 0.15, 'sine', 0.06), 50);
+  }
+
+  private playPlasmaBoom(ctx: AudioContext) {
+    // Massive boom: low rumble + noise + descending tone
+    this.playTone(ctx, 60, 0.5, 'sawtooth', 0.2);
+    this.playNoise(ctx, 0.4, 0.25);
+    setTimeout(() => this.playTone(ctx, 200, 0.4, 'square', 0.15, true), 50);
+    setTimeout(() => this.playNoise(ctx, 0.3, 0.15), 150);
+    setTimeout(() => this.playTone(ctx, 100, 0.3, 'sawtooth', 0.1, true), 250);
+  }
+
   private playGameOver(ctx: AudioContext) {
     this.playTone(ctx, 400, 0.2, 'sawtooth', 0.15);
     setTimeout(() => this.playTone(ctx, 300, 0.2, 'sawtooth', 0.15), 200);
@@ -129,6 +150,7 @@ class SoundSynth {
 
 export type SoundType =
   | 'shoot_cannon' | 'shoot_laser' | 'shoot_aoe' | 'shoot_sniper' | 'shoot_tesla'
+  | 'shoot_flame' | 'shoot_missile' | 'shoot_railgun' | 'shoot_plasma' | 'plasma_boom'
   | 'hit' | 'kill' | 'boss_kill'
   | 'wave_start' | 'wave_clear'
   | 'place_tower' | 'upgrade' | 'sell'

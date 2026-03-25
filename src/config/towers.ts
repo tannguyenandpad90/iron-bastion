@@ -38,6 +38,11 @@ export const TOWER_CONFIG: Record<TowerType, TowerStats> = {
     damage: 200, range: 10, fireRate: 0.15, cost: 250, upgradeCost: 180,
     projectileSpeed: 1500,
   },
+  plasma: {
+    damage: 300, range: 6, fireRate: 0.1, cost: 400, upgradeCost: 250,
+    projectileSpeed: 150, // very slow orb
+    statusOnHit: { type: 'burn', duration: 4000, intensity: 12 },
+  },
 };
 
 export const TOWER_UPGRADE_MULTIPLIER = 1.2;
@@ -91,6 +96,11 @@ export const TOWER_MILESTONES: Record<TowerType, MilestoneBonus[]> = {
     { level: 6, name: 'Pierce All', effect: 'Hits all enemies in line' },
     { level: 9, name: 'Orbital', effect: 'Instant hit + screen shake' },
   ],
+  plasma: [
+    { level: 3, name: 'Plasma Core', effect: '+50% blast radius' },
+    { level: 6, name: 'Singularity', effect: 'Pulls enemies inward' },
+    { level: 9, name: 'Nova Burst', effect: '3x explosion + devastate' },
+  ],
 };
 
 export const TOWER_DESCRIPTIONS: Record<TowerType, { name: string; desc: string; color: string; key: string }> = {
@@ -102,4 +112,5 @@ export const TOWER_DESCRIPTIONS: Record<TowerType, { name: string; desc: string;
   flame:   { name: 'Flamethrower', desc: 'Close range burn cone',   color: '#FF8C00', key: '6' },
   missile: { name: 'Missile',    desc: 'Heavy AoE + stun',          color: '#FF4444', key: '7' },
   railgun: { name: 'Railgun',    desc: 'Maximum damage, slow fire', color: '#44DDFF', key: '8' },
+  plasma:  { name: 'Plasma Cannon', desc: 'Devastating orb + mega explosion', color: '#FF00FF', key: '9' },
 };

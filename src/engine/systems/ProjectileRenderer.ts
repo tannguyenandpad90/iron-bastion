@@ -11,6 +11,7 @@ const PROJ_STYLE: Record<string, { core: number; glow: number; size: number; tra
   flame:   { core: 0xFF8C00, glow: 0xFFAA33, size: 3, trail: false },
   missile: { core: 0xFF4444, glow: 0xFF6666, size: 6, trail: true },
   railgun: { core: 0x44DDFF, glow: 0x88EEFF, size: 3, trail: true },
+  plasma:  { core: 0xFF00FF, glow: 0xFF88FF, size: 10, trail: true },
 };
 
 const DEFAULT = { core: 0x00F5A0, glow: 0x00FFCC, size: 3, trail: true };

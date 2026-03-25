@@ -7,6 +7,7 @@ import { getActiveMap } from '../../config/game';
 import { getMap } from '../../config/maps';
 import { useGameStore } from '../../stores/gameStore';
 import { vfxBridge } from '../VfxBridge';
+import { audio } from '../AudioManager';
 
 import { GridRenderer } from '../systems/GridRenderer';
 import { TowerRenderer } from '../systems/TowerRenderer';
@@ -142,6 +143,31 @@ export class GameScene implements Scene {
           this.effectRenderer.spawnParticleBurst(ev.pos, 15, 0x4488ff, 100, 3, 20);
           this.effectRenderer.shake(5, 0.25);
           break;
+        case 'plasma_impact': {
+          // === MEGA EXPLOSION ===
+          audio.play('plasma_boom');
+          // Layer 1: bright white flash
+          this.effectRenderer.spawnFlash(ev.pos, 0xffffff);
+          // Layer 2: pink core explosion
+          this.effectRenderer.spawnExplosion(ev.pos, ev.radius * 0.6, 0xFF00FF);
+          // Layer 3: outer explosion
+          this.effectRenderer.spawnExplosion(ev.pos, ev.radius, 0xFF44AA);
+          // Layer 4: expanding shockwave ring
+          this.effectRenderer.spawnShockwave(ev.pos, ev.radius * 1.5, 0xFF00FF);
+          // Layer 5: second shockwave (delayed illusion via larger radius)
+          this.effectRenderer.spawnRing(ev.pos, ev.radius * 1.8, 0xFF88FF);
+          // Layer 6: massive particle burst — pink + white + purple
+          this.effectRenderer.spawnParticleBurst(ev.pos, 50, 0xFF00FF, 200, 5, 30);
+          this.effectRenderer.spawnParticleBurst(ev.pos, 30, 0xffffff, 150, 3, 20);
+          this.effectRenderer.spawnParticleBurst(ev.pos, 20, 0x9B5CFF, 120, 4, 40);
+          // Layer 7: upward sparks
+          this.effectRenderer.spawnSparks(ev.pos, 15, 0xFF88FF, 0, -1);
+          this.effectRenderer.spawnSparks(ev.pos, 10, 0xFFAAFF, 0.5, -0.8);
+          this.effectRenderer.spawnSparks(ev.pos, 10, 0xFFAAFF, -0.5, -0.8);
+          // Heavy screen shake
+          this.effectRenderer.shake(10, 0.5);
+          break;
+        }
       }
     }
   }
